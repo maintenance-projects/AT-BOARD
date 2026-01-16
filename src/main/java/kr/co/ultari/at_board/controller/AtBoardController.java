@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Slf4j
 @Controller
 public class AtBoardController {
+    @RequestMapping("/")
+    public String home() {
+        return "pages/menu/index";
+    }
+
     @RequestMapping("/{key}")
     public String index(Model model, @PathVariable("key") String userId) {
         log.info(userId);

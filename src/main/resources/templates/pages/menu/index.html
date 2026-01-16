@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+    th:replace="~{core/layout :: layout('그룹웨어', ~{::pageHeader}, ~{::pageBody}, ~{::pageHead}, ~{::pageScripts})}">
+
+<th:block th:fragment="pageHead">
+    <link rel="stylesheet" href="/pages/menu/menu.css" />
+</th:block>
+
+<th:block th:fragment="pageHeader">
+    <div class="topbar topbar--center">
+        <button class="topbar__btn" type="button" data-action="go-back" aria-label="뒤로가기">
+            <span class="ico ico--back" aria-hidden="true"></span>
+        </button>
+        <h1 class="topbar__title">그룹웨어</h1>
+        <div class="topbar__spacer"></div>
+    </div>
+</th:block>
+
+<th:block th:fragment="pageBody">
+    <div class="page">
+        <section class="section">
+            <div class="section__head">
+                <h2 class="section__title">게시판</h2>
+            </div>
+
+            <div class="card">
+                <div class="grid grid--menu">
+                    <a class="tile" href="#" data-route="/project">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-add.png" alt="글쓰기" /></span>
+                        <span class="tile__label">글쓰기</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/dashboard">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-mail.png" alt="최근공지글" /></span>
+                        <span class="tile__label">최근 공지글</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/address">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-read-mail.png" alt="최근읽은공지글" /></span>
+                        <span class="tile__label">최근 읽은 공지글</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/chat">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-flag.png" alt="플래그게시물"
+                                class="ic-30" /></span>
+                        <span class="tile__label">플래그 게시물</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/calendar">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-favorites.png" alt="즐겨찾는게시판" /></span>
+                        <span class="tile__label">즐겨찾는 게시판</span>
+                    </a>
+
+                    <a class="tile" href="#" data-route="/customer">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-board.png" alt="사내게시판" /></span>
+                        <span class="tile__label">사내 게시판</span>
+                    </a>
+
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section__head">
+                <h2 class="section__title">메모보고(협조)</h2>
+            </div>
+
+            <div class="card">
+                <div class="grid grid--mypage">
+                    <a class="tile" href="#" data-route="/mypage/profile">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-add.png" alt="메모쓰기" /></span>
+                        <span class="tile__label">메모 쓰기</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/mypage/dashboard">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-reception.png" alt="받은내용" /></span>
+                        <span class="tile__label">받은내용</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/mypage/schedule">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-ing.png" alt="진행중인내용" /></span>
+                        <span class="tile__label">진행중인 내용</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/mypage/expense">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-end.png" alt="종료된내용" /></span>
+                        <span class="tile__label">종료된 내용</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/mypage/profile">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-show.png" alt="공개내용" /></span>
+                        <span class="tile__label">공개내용</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/mypage/profile">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-send.png" alt="보낸내용" /></span>
+                        <span class="tile__label">보낸내용</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/mypage/profile">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-Temporary.png" alt="임시보관함" /></span>
+                        <span class="tile__label">임시보관함</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/mypage/profile">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-recycle.png" alt="휴지통" /></span>
+                        <span class="tile__label">휴지통</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/mypage/profile">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-flag.png" alt="플래그내용"
+                                class="ic-30" /></span>
+                        <span class="tile__label">플래그 내용</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/mypage/profile">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-individual.png" alt="개인분류함" /></span>
+                        <span class="tile__label">개인 분류함</span>
+                    </a>
+
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section__head">
+                <h2 class="section__title">스퀘어</h2>
+            </div>
+
+            <div class="card">
+                <div class="grid grid--admin">
+                    <a class="tile" href="#" data-route="/admin/menu">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-group-add.png" alt="그룹만들기" /></span>
+                        <span class="tile__label">그룹 만들기</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/expense">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-notice.png" alt="" /></span>
+                        <span class="tile__label">최신 글</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/notice">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-flag.png" alt="플래그글"
+                                class="ic-30" /></span>
+                        <span class="tile__label">플래그 글</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/users">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-mention.png" alt="멘션된글" /></span>
+                        <span class="tile__label">멘션된 글</span>
+                    </a>
+
+                    <a class="tile" href="#" data-route="/admin/worklog">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-work-1.png" alt="" /></span>
+                        <span class="tile__label">처리할 업무</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/sales">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-work-2.png" alt="" /></span>
+                        <span class="tile__label">요청한 업무</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/sales">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-all-work.png" alt="" /></span>
+                        <span class="tile__label">전체 업무진행 현황</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/sales">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-stats.png" alt="업무현황통계" /></span>
+                        <span class="tile__label">업무 현황 통계</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/sales">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-vip.png" alt="vip" /></span>
+                        <span class="tile__label">VIP</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/sales">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-star-group.png" alt=""
+                                class="ic-30" /></span>
+                        <span class="tile__label">즐겨찾는 그룹</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/sales">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-my-group.png" alt="" /></span>
+                        <span class="tile__label">내 그룹</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/sales">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-show-group.png" alt="" /></span>
+                        <span class="tile__label">공개 그룹</span>
+                    </a>
+                    <a class="tile" href="#" data-route="/admin/sales">
+                        <span class="tile__icon"><img src="/core/img/menu/ic-end-group.png" alt="" /></span>
+                        <span class="tile__label">종료된 그룹</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
+</th:block>
+
+<th:block th:fragment="pageScripts">
+    <script src="/pages/menu/menu.js"></script>
+</th:block>
+
+</html>

@@ -1,0 +1,220 @@
+:root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    --radius: 10px;
+
+    --space-1: 6px;
+    --space-2: 10px;
+    --space-3: 14px;
+    --space-4: 18px;
+    --space-5: 24px;
+
+    --font: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Apple SD Gothic Neo, "Malgun Gothic", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: PretendardVariable;
+    font-size: 12px;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--text);
+    background: var(--bg);
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button {
+    font-family: inherit;
+}
+
+.app {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+}
+
+.app-main {
+    flex: 1;
+}
+
+.page {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: var(--space-4);
+}
+
+@media (min-width: 768px) {
+    .page {
+        max-width: 520px;
+        padding: 28px;
+    }
+}
+
+.topbar {
+    height: 70px;
+    display: grid;
+    grid-template-columns: 48px 1fr 48px;
+    align-items: center;
+    padding: 0 6px;
+}
+
+.topbar__btn {
+    width: 44px;
+    height: 44px;
+    border: 0;
+    background: transparent;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.topbar__btn:active {
+    transform: translateY(0.5px);
+}
+
+.topbar__title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.topbar__spacer {
+    height: 1px;
+}
+
+.ico {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+}
+
+.ico--back {
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M15.7 5.3a1 1 0 0 1 0 1.4L10.4 12l5.3 5.3a1 1 0 1 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M15.7 5.3a1 1 0 0 1 0 1.4L10.4 12l5.3 5.3a1 1 0 1 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    background: var(--text);
+}
+
+.section {
+    margin-top: 18px;
+}
+
+.section:first-child {
+    margin-top: 0;
+}
+
+.section__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.section__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-left: 10px;
+}
+
+.linkbtn {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 6px;
+    cursor: pointer;
+}
+
+.card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    /* border: 1px solid rgba(229, 231, 235, 0.9); */
+    padding: 10px 5px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px 6px;
+    padding: 4px 6px;
+}
+
+@media (max-width: 340px) {
+    .grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px 6px;
+    border-radius: 12px;
+    user-select: none;
+}
+
+.tile:active {
+    background: rgba(17, 24, 39, 0.04);
+}
+
+.tile__icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+}
+
+.tile__icon img {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+.tile__label {
+    font-size: 11px;
+    line-height: 1.1;
+    text-align: center;
+    color: #767676;
+    font-weight: 600;
+    word-break: keep-all;
+}
+
+.ic-30 {
+    width: 30px !important;
+    height: 30px !important;
+}

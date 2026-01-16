@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+    th:fragment="layout(pageTitle, headerFragment, bodyFragment, headFragment, scriptFragment)">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title th:text="${pageTitle}">그룹웨어</title>
+    <link rel="stylesheet" href="/core/css/app.css" />
+    <th:block th:replace="${headFragment}"></th:block>
+</head>
+
+<body>
+    <div class="app">
+        <header class="app-header">
+            <th:block th:replace="${headerFragment}"></th:block>
+        </header>
+
+        <main class="app-main">
+            <th:block th:replace="${bodyFragment}"></th:block>
+        </main>
+    </div>
+
+    <script src="/core/js/app.js"></script>
+    <th:block th:replace="${scriptFragment}"></th:block>
+</body>
+
+</html>
