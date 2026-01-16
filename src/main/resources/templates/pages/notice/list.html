@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+    th:replace="~{core/layout :: layout('그룹웨어', ~{::pageHeader}, ~{::pageBody}, ~{::pageHead}, ~{::pageScripts})}">
+
+<head>
+    <th:block th:fragment="pageHead">
+        <link rel="stylesheet" href="/pages/notice/notice.css" />
+    </th:block>
+</head>
+
+<body>
+    <th:block th:fragment="pageHeader">
+        <div class="topbar topbar--center">
+            <button class="topbar__btn" type="button" data-action="go-back" aria-label="뒤로가기">
+                <span class="ico ico--back" aria-hidden="true"></span>
+            </button>
+            <h1 class="topbar__title">최근 공지글</h1>
+            <div class="topbar__spacer"></div>
+        </div>
+    </th:block>
+
+    <th:block th:fragment="pageBody">
+        <main class="page">
+            <section class="list-wrap" aria-label="공지사항 목록">
+                <ul id="noticeList" class="notice-list" role="list"></ul>
+
+                <div id="emptyState" class="empty" hidden>
+                    <p class="empty__text">표시할 공지사항이 없습니다.</p>
+                </div>
+            </section>
+        </main>
+    </th:block>
+
+    <th:block th:fragment="pageScripts">
+        <script src="/pages/notice/list.js"></script>
+    </th:block>
+</body>
+
+</html>

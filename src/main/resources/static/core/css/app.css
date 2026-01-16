@@ -53,7 +53,7 @@ button {
     position: sticky;
     top: 0;
     z-index: 20;
-    background: var(--surface);
+    background: #f5f9ff;
     border-bottom: 1px solid var(--line);
 }
 

@@ -1,0 +1,121 @@
+:root {
+    --bg: #ffffff;
+    --text: #111111;
+    --muted: #9aa0a6;
+    --line: #e9ecef;
+    --pad-x: 16px;
+    --pad-y: 14px;
+    --title-size: 18px;
+    --sub-size: 13px;
+    --date-size: 13px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+}
+
+.page {
+    min-height: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 0 !important;
+}
+
+.list-wrap {
+    width: 100%;
+    max-width: 720px;
+}
+
+.notice-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+}
+
+.notice-item {
+    border-bottom: 1px solid var(--line);
+}
+
+.notice-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: var(--pad-y) var(--pad-x);
+    text-decoration: none;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.notice-left {
+    min-width: 0;
+    flex: 1;
+}
+
+.notice-title {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notice-sub {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notice-num {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+
+.notice-right {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-end;
+    flex-direction: column;
+}
+
+.notice-date {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.2;
+    white-space: nowrap;
+    margin-top: 6px;
+}
+
+.notice-link:active {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.empty {
+    padding: 28px 16px;
+}
+
+.empty__text {
+    margin: 0;
+    font-size: 14px;
+    color: var(--muted);
+}
