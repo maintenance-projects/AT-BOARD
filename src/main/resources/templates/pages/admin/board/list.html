@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시물 관리 - AT-Board Admin</title>
+    <link rel="stylesheet" href="/pages/admin/admin.css" />
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar__header">
+                <h1>AT-Board Admin</h1>
+            </div>
+            <nav class="admin-sidebar__nav">
+                <a href="/admin/dashboard" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📊</span>
+                    대시보드
+                </a>
+                <a href="/admin/categories" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📁</span>
+                    게시판 관리
+                </a>
+                <a href="/admin/boards" class="admin-sidebar__link active">
+                    <span class="admin-sidebar__icon">📝</span>
+                    게시물 관리
+                </a>
+            </nav>
+            <div class="admin-sidebar__footer">
+                <div class="admin-sidebar__user" th:if="${admin}">
+                    <span th:text="${admin.adminName}">관리자</span>
+                </div>
+                <a href="/admin/logout" class="admin-sidebar__logout">로그아웃</a>
+            </div>
+        </aside>
+
+        <main class="admin-main">
+            <div class="admin-header">
+                <h2>게시물 관리</h2>
+                <div class="admin-header__actions">
+                    <select onchange="location.href='/admin/boards?categoryId=' + this.value" class="form-input" style="width: 200px; margin-right: 10px;">
+                        <option value="">전체 게시판</option>
+                        <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}" th:selected="${categoryId != null && categoryId == cat.id}">게시판</option>
+                    </select>
+                    <a th:href="@{/admin/boards/write(categoryId=${categoryId})}" class="btn btn--primary">새 게시물 작성</a>
+                </div>
+            </div>
+
+            <div class="admin-content">
+                <div th:if="${boards.isEmpty()}" class="empty-state">
+                    <p>등록된 게시물이 없습니다.</p>
+                </div>
+
+                <div th:unless="${boards.isEmpty()}" class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>제목</th>
+                                <th>작성자</th>
+                                <th>게시판</th>
+                                <th>작성일</th>
+                                <th>조회수</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="board : ${boards}">
+                                <td th:text="${board.id}">1</td>
+                                <td>
+                                    <a th:href="@{/admin/boards/{id}(id=${board.id})}" th:text="${board.title}" class="link">제목</a>
+                                </td>
+                                <td th:text="${board.authorName}">작성자</td>
+                                <td><span class="badge badge--secondary" th:text="${board.category.name}">게시판</span></td>
+                                <td th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</td>
+                                <td th:text="${board.viewCount}">0</td>
+                                <td>
+                                    <form th:action="@{/admin/boards/delete/{id}(id=${board.id})}" method="post" style="display: inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                        <button type="submit" class="btn btn--sm btn--danger">삭제</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/pages/admin/admin.js"></script>
+</body>
+</html>

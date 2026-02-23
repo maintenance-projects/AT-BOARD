@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+    th:replace="~{core/layout :: layout('게시판', ~{::pageHeader}, ~{::pageBody}, ~{::pageHead}, ~{::pageScripts})}">
+
+<head>
+    <th:block th:fragment="pageHead">
+        <link rel="stylesheet" href="/pages/board/board.css" />
+    </th:block>
+</head>
+
+<body>
+    <th:block th:fragment="pageHeader">
+        <div class="topbar topbar--center">
+            <button class="topbar__btn" type="button" onclick="toggleCategoryMenu()" aria-label="메뉴">
+                <span class="ico ico--menu" aria-hidden="true"></span>
+            </button>
+            <h1 class="topbar__title" th:text="${selectedCategory != null ? selectedCategory.name : '게시판'}">게시판</h1>
+            <a th:if="${selectedCategory == null || selectedCategory.adminOnly == null || !selectedCategory.adminOnly}"
+               th:href="@{/board/write(categoryId=${selectedCategory != null ? selectedCategory.id : ''})}"
+               class="topbar__btn"
+               aria-label="글쓰기">
+                <span class="ico ico--write" aria-hidden="true"></span>
+            </a>
+        </div>
+
+        <!-- 게시판 목록 메뉴 -->
+        <div id="categoryMenu" class="category-menu" style="display: none;">
+            <div class="category-menu__header">
+                <h2>게시판 목록</h2>
+                <button type="button" onclick="toggleCategoryMenu()" class="category-menu__close">&times;</button>
+            </div>
+            <nav class="category-menu__list">
+                <a th:each="category : ${categories}"
+                   th:href="@{/board(categoryId=${category.id})}"
+                   th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? 'category-menu__item--active' : ''}"
+                   class="category-menu__item"
+                   th:text="${category.name}">게시판명</a>
+            </nav>
+        </div>
+        <div id="categoryMenuOverlay" class="category-menu__overlay" style="display: none;" onclick="toggleCategoryMenu()"></div>
+    </th:block>
+
+    <th:block th:fragment="pageBody">
+        <main class="page">
+            <section class="board-list" aria-label="게시글 목록">
+                <div th:if="${boards.totalElements == 0}" class="empty">
+                    <p class="empty__text">등록된 게시글이 없습니다.</p>
+                    <a href="/board/write" class="btn btn--primary">첫 글 작성하기</a>
+                </div>
+
+                <div th:unless="${boards.totalElements == 0}">
+                    <!-- 게시글 목록 -->
+                    <div class="board-items" id="boardItems">
+                        <article th:each="board : ${boards.content}" class="board-item" th:onclick="'location.href=\'/board/' + ${board.id} + '\''">
+                            <div class="board-item__header">
+                                <h2 class="board-item__title" th:text="${board.title}">제목</h2>
+                                <div class="board-item__meta">
+                                    <span class="board-item__author" th:text="${board.authorName}">작성자</span>
+                                    <span class="board-item__dot">·</span>
+                                    <time class="board-item__date" th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
+                                </div>
+                            </div>
+                            <p class="board-item__preview" th:text="${#strings.abbreviate(board.plainContent, 100)}">내용 미리보기</p>
+                            <div class="board-item__footer">
+                                <span class="board-item__stat">
+                                    <span class="ico ico--heart-outline" aria-hidden="true"></span>
+                                    <span th:text="${board.likeCount}">0</span>
+                                </span>
+                                <span class="board-item__stat">
+                                    <span class="ico ico--comment" aria-hidden="true"></span>
+                                    <span th:text="${board.commentCount}">0</span>
+                                </span>
+                                <span class="board-item__stat">
+                                    <span class="ico ico--view" aria-hidden="true"></span>
+                                    <span th:text="${board.viewCount}">0</span>
+                                </span>
+                            </div>
+                        </article>
+                    </div>
+
+                    <!-- PC용 페이징 -->
+                    <div class="pagination pagination--desktop" th:if="${boards.totalPages > 1}">
+                        <!-- 이전 페이지 -->
+                        <a th:if="${boards.hasPrevious()}"
+                           th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.number - 1})}"
+                           class="pagination__btn">&laquo; 이전</a>
+                        <span th:unless="${boards.hasPrevious()}" class="pagination__btn pagination__btn--disabled">&laquo; 이전</span>
+
+                        <!-- 페이지 번호 -->
+                        <th:block th:with="startPage=${T(Math).max(0, boards.number - 2)}, endPage=${T(Math).min(boards.totalPages - 1, boards.number + 2)}">
+                            <a th:if="${startPage > 0}"
+                               th:href="@{/board(categoryId=${selectedCategory.id}, page=0)}"
+                               class="pagination__number">1</a>
+                            <span th:if="${startPage > 1}" class="pagination__ellipsis">...</span>
+
+                            <th:block th:each="i : ${#numbers.sequence(startPage, endPage)}">
+                                <a th:if="${i != boards.number}"
+                                   th:href="@{/board(categoryId=${selectedCategory.id}, page=${i})}"
+                                   th:text="${i + 1}"
+                                   class="pagination__number"></a>
+                                <span th:if="${i == boards.number}"
+                                      th:text="${i + 1}"
+                                      class="pagination__number pagination__number--active"></span>
+                            </th:block>
+
+                            <span th:if="${endPage < boards.totalPages - 2}" class="pagination__ellipsis">...</span>
+                            <a th:if="${endPage < boards.totalPages - 1}"
+                               th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.totalPages - 1})}"
+                               th:text="${boards.totalPages}"
+                               class="pagination__number"></a>
+                        </th:block>
+
+                        <!-- 다음 페이지 -->
+                        <a th:if="${boards.hasNext()}"
+                           th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.number + 1})}"
+                           class="pagination__btn">다음 &raquo;</a>
+                        <span th:unless="${boards.hasNext()}" class="pagination__btn pagination__btn--disabled">다음 &raquo;</span>
+                    </div>
+
+                    <!-- 모바일용 무한 스크롤 로딩 인디케이터 -->
+                    <div class="loading-indicator pagination--mobile" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>로딩 중...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </th:block>
+
+    <th:block th:fragment="pageScripts">
+        <script src="/pages/board/board.js"></script>
+        <script th:inline="javascript">
+            function toggleCategoryMenu() {
+                const menu = document.getElementById('categoryMenu');
+                const overlay = document.getElementById('categoryMenuOverlay');
+
+                if (menu.style.display === 'none') {
+                    menu.style.display = 'block';
+                    overlay.style.display = 'block';
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    menu.style.display = 'none';
+                    overlay.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+            }
+
+            // 무한 스크롤 구현 (모바일)
+            (function() {
+                const categoryId = /*[[${selectedCategory?.id}]]*/ null;
+                if (!categoryId) return;
+
+                let currentPage = /*[[${boards.number}]]*/ 0;
+                const totalPages = /*[[${boards.totalPages}]]*/ 1;
+                let isLoading = false;
+
+                // 모바일 여부 확인
+                function isMobile() {
+                    return window.innerWidth <= 768;
+                }
+
+                // 무한 스크롤 핸들러
+                function handleInfiniteScroll() {
+                    if (!isMobile()) return;
+                    if (isLoading) return;
+                    if (currentPage >= totalPages - 1) return;
+
+                    const scrollPosition = window.innerHeight + window.scrollY;
+                    const threshold = document.documentElement.scrollHeight - 200;
+
+                    if (scrollPosition >= threshold) {
+                        loadMoreBoards();
+                    }
+                }
+
+                // 다음 페이지 로드
+                function loadMoreBoards() {
+                    isLoading = true;
+                    const loadingIndicator = document.querySelector('.loading-indicator');
+                    if (loadingIndicator) loadingIndicator.style.display = 'block';
+
+                    fetch('/board/api/boards?categoryId=' + categoryId + '&page=' + (currentPage + 1))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.content && data.content.length > 0) {
+                                const boardItems = document.getElementById('boardItems');
+                                data.content.forEach(board => {
+                                    const article = createBoardItem(board);
+                                    boardItems.appendChild(article);
+                                });
+                                currentPage = data.currentPage;
+                            }
+                        })
+                        .catch(error => console.error('Error loading boards:', error))
+                        .finally(() => {
+                            isLoading = false;
+                            if (loadingIndicator) loadingIndicator.style.display = 'none';
+                        });
+                }
+
+                // 게시글 아이템 생성
+                function createBoardItem(board) {
+                    const article = document.createElement('article');
+                    article.className = 'board-item';
+                    article.onclick = function() { location.href = '/board/' + board.id; };
+
+                    const createdAt = new Date(board.createdAt).toLocaleString('ko-KR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    article.innerHTML = `
+                        <div class="board-item__header">
+                            <h2 class="board-item__title">${escapeHtml(board.title)}</h2>
+                            <div class="board-item__meta">
+                                <span class="board-item__author">${escapeHtml(board.authorName)}</span>
+                                <span class="board-item__dot">·</span>
+                                <time class="board-item__date">${createdAt}</time>
+                            </div>
+                        </div>
+                        <p class="board-item__preview">${escapeHtml(abbreviate(stripHtml(board.content), 100))}</p>
+                        <div class="board-item__footer">
+                            <span class="board-item__stat">
+                                <span class="ico ico--heart-outline" aria-hidden="true"></span>
+                                <span>${board.likeCount || 0}</span>
+                            </span>
+                            <span class="board-item__stat">
+                                <span class="ico ico--comment" aria-hidden="true"></span>
+                                <span>${board.commentCount || 0}</span>
+                            </span>
+                            <span class="board-item__stat">
+                                <span class="ico ico--view" aria-hidden="true"></span>
+                                <span>${board.viewCount || 0}</span>
+                            </span>
+                        </div>
+                    `;
+                    return article;
+                }
+
+                function escapeHtml(text) {
+                    const div = document.createElement('div');
+                    div.textContent = text || '';
+                    return div.innerHTML;
+                }
+
+                function abbreviate(text, maxLength) {
+                    if (!text) return '';
+                    if (text.length <= maxLength) return text;
+                    return text.substring(0, maxLength - 3) + '...';
+                }
+
+                function stripHtml(html) {
+                    if (!html) return '';
+                    const div = document.createElement('div');
+                    div.innerHTML = html;
+                    return div.textContent || div.innerText || '';
+                }
+
+                // 스크롤 이벤트 리스너
+                if (isMobile()) {
+                    window.addEventListener('scroll', handleInfiniteScroll);
+                }
+
+                // 창 크기 변경 시 이벤트 리스너 재설정
+                window.addEventListener('resize', function() {
+                    if (isMobile()) {
+                        window.addEventListener('scroll', handleInfiniteScroll);
+                    } else {
+                        window.removeEventListener('scroll', handleInfiniteScroll);
+                    }
+                });
+            })();
+        </script>
+    </th:block>
+</body>
+
+</html>

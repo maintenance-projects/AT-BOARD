@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+    th:replace="~{core/layout :: layout('게시글 상세', ~{::pageHeader}, ~{::pageBody}, ~{::pageHead}, ~{::pageScripts})}">
+
+<head>
+    <th:block th:fragment="pageHead">
+        <link rel="stylesheet" href="/pages/board/board.css" />
+    </th:block>
+</head>
+
+<body>
+    <th:block th:fragment="pageHeader">
+        <div class="topbar topbar--center">
+            <h1 class="topbar__title">게시글</h1>
+            <button class="topbar__btn" type="button" onclick="toggleMenu()" aria-label="메뉴" th:if="${currentUser != null && board.userId == currentUser.userId}">
+                <span class="ico ico--menu" aria-hidden="true"></span>
+            </button>
+        </div>
+
+        <div id="actionMenu" class="action-menu" style="display: none;" th:if="${currentUser != null && board.userId == currentUser.userId}">
+            <a th:href="@{/board/edit/{id}(id=${board.id})}" class="action-menu__item">수정</a>
+            <button type="button" onclick="deletePost()" class="action-menu__item action-menu__item--danger">삭제</button>
+        </div>
+    </th:block>
+
+    <th:block th:fragment="pageBody">
+        <main class="page">
+            <article class="board-detail">
+                <header class="board-detail__header">
+                    <h2 class="board-detail__title" th:text="${board.title}">제목</h2>
+                    <div class="board-detail__meta">
+                        <span class="board-detail__author" th:text="${board.authorName}">작성자</span>
+                        <span class="board-detail__dot">·</span>
+                        <time class="board-detail__date" th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
+                        <span class="board-detail__dot">·</span>
+                        <span class="board-detail__views">조회 <span th:text="${board.viewCount}">0</span></span>
+                    </div>
+                </header>
+
+                <div class="board-detail__divider"></div>
+
+                <div class="board-detail__content">
+                    <div th:utext="${board.content}">내용</div>
+                </div>
+
+                <!-- 좋아요 -->
+                <div class="board-detail__reactions">
+                    <button type="button"
+                            th:class="${isLiked ? 'like-btn like-btn--active' : 'like-btn'}"
+                            onclick="toggleLike()"
+                            th:data-board-id="${board.id}">
+                        <span class="ico ico--heart" aria-hidden="true"></span>
+                        <span class="like-count" th:text="${board.likeCount}">0</span>
+                    </button>
+                </div>
+
+                <!-- 댓글 -->
+                <div class="comments-section">
+                    <h3 class="comments-section__title">
+                        댓글 <span class="comment-count" th:text="${board.commentCount}">0</span>
+                    </h3>
+
+                    <!-- 댓글 작성 폼 -->
+                    <form th:action="@{/board/{id}/comments(id=${board.id})}" method="post" class="comment-form">
+                        <textarea
+                            name="content"
+                            class="comment-form__input"
+                            placeholder="댓글을 입력하세요"
+                            required
+                            maxlength="1000"
+                            rows="3"></textarea>
+                        <button type="submit" class="comment-form__submit">등록</button>
+                    </form>
+
+                    <!-- 댓글 목록 -->
+                    <div class="comments-list">
+                        <div th:if="${comments.isEmpty()}" class="comments-empty">
+                            첫 댓글을 작성해보세요.
+                        </div>
+
+                        <div th:each="comment : ${comments}" class="comment-item">
+                            <div class="comment-item__header">
+                                <span class="comment-item__author" th:text="${comment.authorDisplayName}">작성자</span>
+                                <time class="comment-item__date" th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
+                            </div>
+                            <p class="comment-item__content" th:text="${comment.content}">댓글 내용</p>
+                            <div th:if="${currentUser != null && comment.userId == currentUser.userId}" class="comment-item__actions">
+                                <form th:action="@{/board/comments/{commentId}/delete(commentId=${comment.id})}" method="post" style="display: inline;" onsubmit="return confirm('댓글을 삭제하시겠습니까?');">
+                                    <input type="hidden" name="boardId" th:value="${board.id}" />
+                                    <button type="submit" class="comment-item__delete">삭제</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="board-detail__actions">
+                    <a th:href="@{/board(categoryId=${board.category.id})}" class="btn btn--secondary">목록으로</a>
+                </div>
+            </article>
+        </main>
+
+        <form th:action="@{/board/delete/{id}(id=${board.id})}" method="post" id="deleteForm" style="display: none;">
+            <input type="hidden" name="categoryId" th:value="${board.category.id}" />
+        </form>
+    </th:block>
+
+    <th:block th:fragment="pageScripts">
+        <script th:inline="javascript">
+            function toggleMenu() {
+                const menu = document.getElementById('actionMenu');
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            }
+
+            function deletePost() {
+                if (confirm('정말 삭제하시겠습니까?')) {
+                    document.getElementById('deleteForm').submit();
+                }
+            }
+
+            document.addEventListener('click', function(e) {
+                const menu = document.getElementById('actionMenu');
+                const menuBtn = document.querySelector('[onclick="toggleMenu()"]');
+                if (menu.style.display !== 'none' && !menu.contains(e.target) && e.target !== menuBtn) {
+                    menu.style.display = 'none';
+                }
+            });
+
+            // 좋아요 토글
+            function toggleLike() {
+                const btn = document.querySelector('.like-btn');
+                const boardId = btn.dataset.boardId;
+
+                fetch('/board/' + boardId + '/like', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.isLiked) {
+                        btn.classList.add('like-btn--active');
+                    } else {
+                        btn.classList.remove('like-btn--active');
+                    }
+                    document.querySelector('.like-count').textContent = data.likeCount;
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        </script>
+    </th:block>
+</body>
+
+</html>

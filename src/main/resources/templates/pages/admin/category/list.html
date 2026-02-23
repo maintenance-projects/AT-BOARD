@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시판 관리 - AT-Board Admin</title>
+    <link rel="stylesheet" href="/pages/admin/admin.css" />
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar__header">
+                <h1>AT-Board Admin</h1>
+            </div>
+            <nav class="admin-sidebar__nav">
+                <a href="/admin/dashboard" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📊</span>
+                    대시보드
+                </a>
+                <a href="/admin/categories" class="admin-sidebar__link active">
+                    <span class="admin-sidebar__icon">📁</span>
+                    게시판 관리
+                </a>
+                <a href="/admin/boards" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📝</span>
+                    게시물 관리
+                </a>
+            </nav>
+            <div class="admin-sidebar__footer">
+                <div class="admin-sidebar__user" th:if="${admin}">
+                    <span th:text="${admin.adminName}">관리자</span>
+                </div>
+                <a href="/admin/logout" class="admin-sidebar__logout">로그아웃</a>
+            </div>
+        </aside>
+
+        <main class="admin-main">
+            <div class="admin-header">
+                <h2>게시판 관리</h2>
+                <div class="admin-header__actions">
+                    <a href="/admin/categories/new" class="btn btn--primary">새 게시판 만들기</a>
+                </div>
+            </div>
+
+            <div class="admin-content">
+                <div th:if="${categories.isEmpty()}" class="empty-state">
+                    <p>등록된 게시판이 없습니다.</p>
+                    <a href="/admin/categories/new" class="btn btn--primary">첫 게시판 만들기</a>
+                </div>
+
+                <div th:unless="${categories.isEmpty()}" class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>게시판명</th>
+                                <th>설명</th>
+                                <th>유형</th>
+                                <th>부서 코드</th>
+                                <th>작성 권한</th>
+                                <th>상태</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="category : ${categories}">
+                                <td th:text="${category.id}">1</td>
+                                <td><strong th:text="${category.name}">게시판명</strong></td>
+                                <td th:text="${category.description}">설명</td>
+                                <td>
+                                    <span th:if="${category.deptId == null}" class="badge badge--primary">전사 공용</span>
+                                    <span th:unless="${category.deptId == null}" class="badge badge--secondary">부서 전용</span>
+                                </td>
+                                <td th:text="${category.deptId != null ? category.deptId : '-'}">-</td>
+                                <td>
+                                    <span th:if="${category.adminOnly}" class="badge badge--danger">관리자 전용</span>
+                                    <span th:unless="${category.adminOnly}" class="badge badge--success">전체</span>
+                                </td>
+                                <td>
+                                    <span th:if="${category.isActive}" class="badge badge--success">활성</span>
+                                    <span th:unless="${category.isActive}" class="badge badge--danger">비활성</span>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a th:href="@{/admin/categories/edit/{id}(id=${category.id})}" class="btn btn--sm btn--secondary">수정</a>
+                                        <form th:action="@{/admin/categories/delete/{id}(id=${category.id})}" method="post" style="display: inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                            <button type="submit" class="btn btn--sm btn--danger">삭제</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/pages/admin/admin.js"></script>
+</body>
+</html>

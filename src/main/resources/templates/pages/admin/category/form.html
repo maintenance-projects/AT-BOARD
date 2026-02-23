@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit ? '게시판 수정' : '게시판 생성'} + ' - AT-Board Admin'">게시판 관리 - AT-Board Admin</title>
+    <link rel="stylesheet" href="/pages/admin/admin.css" />
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar__header">
+                <h1>AT-Board Admin</h1>
+            </div>
+            <nav class="admin-sidebar__nav">
+                <a href="/admin/dashboard" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📊</span>
+                    대시보드
+                </a>
+                <a href="/admin/categories" class="admin-sidebar__link active">
+                    <span class="admin-sidebar__icon">📁</span>
+                    게시판 관리
+                </a>
+                <a href="/admin/boards" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📝</span>
+                    게시물 관리
+                </a>
+            </nav>
+            <div class="admin-sidebar__footer">
+                <div class="admin-sidebar__user" th:if="${admin}">
+                    <span th:text="${admin.adminName}">관리자</span>
+                </div>
+                <a href="/admin/logout" class="admin-sidebar__logout">로그아웃</a>
+            </div>
+        </aside>
+
+        <main class="admin-main">
+            <div class="admin-header">
+                <h2 th:text="${isEdit ? '게시판 수정' : '게시판 생성'}">게시판 생성</h2>
+                <div class="admin-header__actions">
+                    <a href="/admin/categories" class="btn btn--secondary">목록으로</a>
+                </div>
+            </div>
+
+            <div class="admin-content">
+                <div class="admin-form-container">
+                    <form th:action="${isEdit ? '/admin/categories/edit/' + category.id : '/admin/categories/new'}" method="post" class="admin-form">
+                        <div class="form-group">
+                            <label for="name" class="form-label">게시판명 <span class="required">*</span></label>
+                            <input type="text" id="name" name="name" class="form-input" th:value="${category.name}" placeholder="예: 공지사항, 자유게시판" required maxlength="100" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description" class="form-label">설명</label>
+                            <textarea id="description" name="description" class="form-textarea" th:text="${category.description}" placeholder="게시판에 대한 간단한 설명" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group" th:if="${!isEdit}">
+                            <label for="departmentId" class="form-label">부서 (선택 안 하면 전사 공용)</label>
+                            <select id="departmentId" name="departmentId" class="form-input">
+                                <option value="">전사 공용 게시판</option>
+                                <option th:each="dept : ${departments}" th:value="${dept.deptId}" th:text="${dept.deptName + ' (' + dept.deptId + ')'}">부서명</option>
+                            </select>
+                            <small class="form-help">부서를 선택하면 해당 부서 전용 게시판이 됩니다.</small>
+                        </div>
+
+                        <div class="form-group" th:if="${isEdit && category.deptId != null}">
+                            <label class="form-label">부서</label>
+                            <div class="form-static">
+                                <span class="badge badge--secondary" th:text="${category.deptName + ' (' + category.deptId + ')'}">부서명</span>
+                                <small class="form-help">부서 전용 게시판의 부서는 변경할 수 없습니다.</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="adminOnly" name="adminOnly" value="true" th:checked="${category.adminOnly != null && category.adminOnly}" />
+                                관리자만 글 작성 허용
+                            </label>
+                            <small class="form-help">체크하면 관리자 페이지에서만 글을 작성할 수 있습니다.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="isActive" name="isActive" value="true" th:checked="${category.isActive != null ? category.isActive : true}" />
+                                활성화
+                            </label>
+                            <small class="form-help">비활성화하면 사용자에게 보이지 않습니다.</small>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" onclick="history.back()" class="btn btn--secondary">취소</button>
+                            <button type="submit" class="btn btn--primary" th:text="${isEdit ? '수정' : '생성'}">생성</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/pages/admin/admin.js"></script>
+</body>
+</html>

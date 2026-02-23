@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 대시보드 - AT-Board</title>
+    <link rel="stylesheet" href="/pages/admin/admin.css" />
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar__header">
+                <h1>AT-Board Admin</h1>
+            </div>
+            <nav class="admin-sidebar__nav">
+                <a href="/admin/dashboard" class="admin-sidebar__link active">
+                    <span class="admin-sidebar__icon">📊</span>
+                    대시보드
+                </a>
+                <a href="/admin/categories" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📁</span>
+                    게시판 관리
+                </a>
+                <a href="/admin/boards" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📝</span>
+                    게시물 관리
+                </a>
+            </nav>
+            <div class="admin-sidebar__footer">
+                <div class="admin-sidebar__user" th:if="${admin}">
+                    <span th:text="${admin.adminName}">관리자</span>
+                </div>
+                <a href="/admin/logout" class="admin-sidebar__logout">로그아웃</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="admin-header">
+                <h2>대시보드</h2>
+            </div>
+
+            <div class="admin-content">
+                <!-- 통계 카드 -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card__icon">📝</div>
+                        <div class="stat-card__content">
+                            <div class="stat-card__label">총 게시물</div>
+                            <div class="stat-card__value" th:text="${totalBoards}">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-card__icon">👥</div>
+                        <div class="stat-card__content">
+                            <div class="stat-card__label">총 사용자</div>
+                            <div class="stat-card__value" th:text="${totalUsers}">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-card__icon">📁</div>
+                        <div class="stat-card__content">
+                            <div class="stat-card__label">총 게시판</div>
+                            <div class="stat-card__value" th:text="${totalCategories}">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-card--highlight">
+                        <div class="stat-card__icon">🆕</div>
+                        <div class="stat-card__content">
+                            <div class="stat-card__label">오늘 작성된 게시물</div>
+                            <div class="stat-card__value" th:text="${todayBoards}">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 빠른 액션 -->
+                <div class="quick-actions">
+                    <h3>빠른 작업</h3>
+                    <div class="quick-actions__grid">
+                        <a href="/admin/categories/new" class="quick-action-card">
+                            <div class="quick-action-card__icon">➕</div>
+                            <div class="quick-action-card__title">새 게시판 만들기</div>
+                            <div class="quick-action-card__desc">전사 공용 게시판 추가</div>
+                        </a>
+                        <a href="/admin/categories" class="quick-action-card">
+                            <div class="quick-action-card__icon">📁</div>
+                            <div class="quick-action-card__title">게시판 관리</div>
+                            <div class="quick-action-card__desc">게시판 목록 및 설정</div>
+                        </a>
+                        <a href="/admin/boards" class="quick-action-card">
+                            <div class="quick-action-card__icon">📝</div>
+                            <div class="quick-action-card__title">게시물 관리</div>
+                            <div class="quick-action-card__desc">전체 게시물 조회</div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/pages/admin/admin.js"></script>
+</body>
+</html>
