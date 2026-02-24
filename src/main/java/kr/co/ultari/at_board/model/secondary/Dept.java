@@ -8,15 +8,17 @@ import lombok.NoArgsConstructor;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "Department")
+@Table(name = "MSG_DEPT")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Department {
+public class Dept {
 
     @Id
     private String deptId;
 
     private String deptName;
+
+    private String parentDept;
 }

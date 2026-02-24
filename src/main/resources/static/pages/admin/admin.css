@@ -1,3 +1,8 @@
+/* 관리자 페이지 기본 min-width */
+body {
+    min-width: 900px;
+}
+
 /* Admin Layout */
 .admin-layout {
     display: flex;
@@ -399,8 +404,256 @@
 .link {
     color: #3498db;
     text-decoration: none;
+    cursor: pointer;
 }
 
 .link:hover {
     text-decoration: underline;
+}
+
+/* Admin Search Bar */
+.admin-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.admin-search-bar__select {
+    width: auto;
+    flex-shrink: 0;
+}
+
+.admin-search-bar__type {
+    width: auto;
+    flex-shrink: 0;
+}
+
+.admin-search-bar__input {
+    flex: 1;
+    min-width: 180px;
+}
+
+/* Admin Search Result Info */
+.admin-search-result {
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.admin-search-result strong {
+    color: #3498db;
+    font-weight: 600;
+}
+
+/* Admin Pagination */
+.admin-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.admin-pagination__disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: default;
+}
+
+.admin-pagination__ellipsis {
+    padding: 0 4px;
+    color: #999;
+    font-size: 0.9rem;
+    line-height: 32px;
+}
+
+/* Department Tree */
+.dept-tree {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px 12px;
+    max-height: 320px;
+    overflow-y: auto;
+    background: #fff;
+    margin-top: 6px;
+}
+
+.dept-tree__list,
+.dept-tree__children {
+    list-style: none;
+    margin: 0;
+    padding-left: 20px;
+}
+
+.dept-tree__list {
+    padding-left: 0;
+}
+
+.dept-tree__children {
+    display: none;
+}
+
+.dept-tree__children--open {
+    display: block;
+}
+
+.dept-tree__item {
+    margin: 2px 0;
+}
+
+.dept-tree__row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 0;
+}
+
+.dept-tree__toggle {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 10px;
+    color: #999;
+    padding: 0;
+    line-height: 1;
+    text-align: center;
+}
+
+.dept-tree__toggle--hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.dept-tree__label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: normal;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9rem;
+    gap: 4px;
+    user-select: none;
+}
+
+.dept-tree__label:hover {
+    background: #f0f4ff;
+}
+
+.dept-tree__label input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #3498db;
+}
+
+/* 상위 부서 체크로 인해 강제 포함된 하위 부서 */
+.dept-tree__label--inherited {
+    color: #888;
+    cursor: default;
+}
+
+.dept-tree__label--inherited input[type="checkbox"] {
+    cursor: default;
+    opacity: 0.55;
+    accent-color: #95a5a6;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+    .admin-layout {
+        flex-direction: column;
+    }
+
+    .admin-sidebar {
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+        min-height: auto;
+    }
+
+    .admin-sidebar__header {
+        flex: 1;
+        padding: 12px 16px;
+    }
+
+    .admin-sidebar__header h1 {
+        font-size: 1.1rem;
+    }
+
+    .admin-sidebar__nav {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 0;
+        width: 100%;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .admin-sidebar__link {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .admin-sidebar__footer {
+        width: 100%;
+        padding: 10px 16px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .admin-sidebar__user {
+        margin-bottom: 0;
+        font-size: 0.85rem;
+    }
+
+    .admin-sidebar__logout {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+
+    .admin-header {
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .admin-content {
+        padding: 16px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+    }
+
+    .stat-card {
+        padding: 14px;
+    }
+
+    .stat-card__value {
+        font-size: 1.5rem;
+    }
+
+    .quick-actions__grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .admin-form-container {
+        padding: 16px;
+    }
 }

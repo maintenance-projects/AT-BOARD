@@ -1,6 +1,6 @@
 package kr.co.ultari.at_board.service;
 
-import kr.co.ultari.at_board.model.secondary.Department;
+import kr.co.ultari.at_board.model.secondary.Dept;
 import kr.co.ultari.at_board.model.secondary.User;
 import kr.co.ultari.at_board.repository.secondary.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +28,8 @@ public class UserService {
             return null;
         }
 
+        user.setDeptName(departmentService.getDeptName(user.getDeptId()));
+
         log.info("User logged in: {} {} (Dept: {}, UserId: {})",
                 user.getUserName(),
                 user.getPosName() != null ? user.getPosName() : "",
@@ -39,7 +41,7 @@ public class UserService {
     @Transactional("secondaryTransactionManager")
     public User processUserLogin(String userId, String userName, String posName, String deptId, String deptName) {
         // 부서 조회 또는 생성 (부서별 게시판도 자동 생성됨)
-        Department department = departmentService.createOrGetDepartment(deptId, deptName);
+        Dept department = departmentService.createOrGetDepartment(deptId, deptName);
 
         // 사용자 조회 또는 생성
         User user = userRepository.findByUserId(userId)
@@ -71,6 +73,8 @@ public class UserService {
         if (updated) {
             userRepository.save(user);
         }
+
+        user.setDeptName(deptName);
 
         log.info("User logged in: {} {} (Dept: {}, UserId: {})",
                 user.getUserName(),

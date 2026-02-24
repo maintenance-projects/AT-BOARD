@@ -50,14 +50,14 @@
                     <div class="board-detail-header">
                         <h3 th:text="${board.title}">제목</h3>
                         <div class="board-detail-meta">
-                            <span class="badge badge--secondary" th:text="${board.category.name}">게시판</span>
+                            <span class="badge badge--secondary" th:text="${board.category != null ? board.category.name : '-'}">게시판</span>
                             <span th:text="${board.authorName}">작성자</span>
                             <span th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</span>
                             <span>조회 <span th:text="${board.viewCount}">0</span></span>
                         </div>
                     </div>
                     <div class="board-detail-content">
-                        <p th:text="${board.content}" style="white-space: pre-wrap;">내용</p>
+                        <div th:utext="${board.content}" style="line-height: 1.8;">내용</div>
                     </div>
                 </div>
             </div>

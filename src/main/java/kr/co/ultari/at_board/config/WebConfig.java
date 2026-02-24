@@ -14,9 +14,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // SSO 인증 인터셉터 (게시판 페이지에만 적용)
+        // SSO 인증 인터셉터 (사용자 페이지에 적용)
         registry.addInterceptor(ssoAuthInterceptor)
-                .addPathPatterns("/board/**")
+                .addPathPatterns("/board/**", "/menu", "/notice")
                 .excludePathPatterns("/admin/**");
 
         // 관리자 인증 인터셉터 (관리자 페이지에만 적용)

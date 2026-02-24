@@ -1,62 +1,55 @@
-package kr.co.ultari.at_board.config;
+package kr.co.ultari.at_board.controller;
 
 import kr.co.ultari.at_board.model.secondary.User;
 import kr.co.ultari.at_board.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
-@Component
+/**
+ * /{userId} 로 접근 시 SSO 로그인 처리 후 /board 로 리다이렉트
+ * URI에 userId가 노출되지 않도록 redirect 처리
+ */
+@Controller
 @RequiredArgsConstructor
 @Slf4j
-public class SsoAuthInterceptor implements HandlerInterceptor {
+public class SsoEntryController {
 
     private final UserService userService;
 
-    @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        HttpSession session = request.getSession();
-
-        // 이미 로그인된 사용자가 있으면 통과
+    @GetMapping("/{userId}")
+    public String ssoEntry(@PathVariable String userId,
+                           HttpSession session,
+                           HttpServletResponse response) throws IOException {
+        // 이미 로그인된 경우 바로 게시판으로
         if (session.getAttribute("currentUser") != null) {
-            return true;
+            return "redirect:/board";
         }
 
-        // SSO 헤더에서 사용자 ID 추출
-        String userId = request.getHeader("X-User-Id");
-
-        // 헤더가 없으면 접근 차단
-        if (userId == null || userId.isEmpty()) {
-            log.warn("Access denied: X-User-Id header is missing");
-            writeErrorPage(response, "SSO 인증 정보가 없습니다.", null);
-            return false;
-        }
-
-        // 사용자 로그인 처리 (userId로 DB에서 조회)
         User user = userService.processUserLogin(userId);
 
-        // 사용자가 DB에 없으면 접근 차단
         if (user == null) {
-            log.warn("Access denied for user not in database: {}", userId);
+            log.warn("SSO entry failed: user not found - {}", userId);
             writeErrorPage(response, "등록되지 않은 사용자입니다.", "관리자에게 문의하세요.");
-            return false;
+            return null;
         }
 
-        // 세션에 사용자 정보 저장
         session.setAttribute("currentUser", user);
         session.setAttribute("userId", user.getUserId());
         session.setAttribute("deptId", user.getDeptId());
 
-        log.info("SSO authentication successful for user: {} {} ({})",
-                user.getUserName(), user.getPosName() != null ? user.getPosName() : "", user.getUserId());
+        log.info("SSO entry login: {} {} ({})",
+                user.getUserName(),
+                user.getPosName() != null ? user.getPosName() : "",
+                userId);
 
-        return true;
+        return "redirect:/board";
     }
 
     private void writeErrorPage(HttpServletResponse response, String message, String subMessage) throws IOException {

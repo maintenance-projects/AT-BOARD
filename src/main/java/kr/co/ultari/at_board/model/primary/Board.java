@@ -11,7 +11,14 @@ import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "board")
+@Table(name = "board", indexes = {
+        // 카테고리별 최신순 조회 (가장 빈번한 쿼리)
+        @Index(name = "idx_board_category_created", columnList = "CATEGORY_ID, CREATED_AT"),
+        // 전체 최신순 조회 (어드민)
+        @Index(name = "idx_board_created_at", columnList = "CREATED_AT"),
+        // 작성자 조회
+        @Index(name = "idx_board_user_id", columnList = "USER_ID")
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -38,8 +45,11 @@ public class Board {
     @Column(name = "AUTHOR_POS_NAME", length = 100)
     private String authorPosName;
 
+    @Column(name = "AUTHOR_DEPT_NAME", length = 100)
+    private String authorDeptName;
+
     // BoardCategory는 같은 DB이므로 FK 가능
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "CATEGORY_ID", nullable = false)
     private BoardCategory category;
 
@@ -62,12 +72,17 @@ public class Board {
     @Builder.Default
     private int commentCount = 0;
 
-    // 템플릿 호환성을 위한 메서드 (이름 + 직책명)
+    // 부서명 + 이름 + 직책명
     public String getAuthorName() {
-        if (authorPosName != null && !authorPosName.isEmpty()) {
-            return authorName + " " + authorPosName;
+        StringBuilder sb = new StringBuilder();
+        if (authorDeptName != null && !authorDeptName.isEmpty()) {
+            sb.append(authorDeptName).append(" ");
         }
-        return authorName;
+        sb.append(authorName);
+        if (authorPosName != null && !authorPosName.isEmpty()) {
+            sb.append(" ").append(authorPosName);
+        }
+        return sb.toString();
     }
 
     // 이름만 반환

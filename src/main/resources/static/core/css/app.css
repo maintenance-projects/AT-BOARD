@@ -4,6 +4,8 @@
     --text: #111827;
     --muted: #6b7280;
     --line: #e5e7eb;
+    --border: #e5e7eb;
+    --primary: #3b82f6;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
     --radius: 10px;
 
@@ -20,6 +22,16 @@
     box-sizing: border-box;
     font-family: PretendardVariable;
     font-size: 12px;
+}
+
+/* iOS Safari 자동 확대 방지: font-size < 16px 이면 포커스 시 확대됨
+   !important 필요 — 각 페이지 CSS의 클래스 선택자가 더 높은 우선순위를 가짐 */
+@media (max-width: 1023px) {
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
 }
 
 html,
@@ -70,8 +82,44 @@ button {
 
 @media (min-width: 768px) {
     .page {
-        max-width: 520px;
-        padding: 28px;
+        max-width: 640px;
+        padding: 24px 28px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .page {
+        max-width: 1100px;
+        padding: 28px 32px;
+    }
+
+    .topbar {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 32px;
+    }
+
+    .topbar__btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    .grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px 10px;
+    }
+
+    .tile__icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    .tile__icon img {
+        width: 28px;
+        height: 28px;
+    }
+
+    .tile__label {
+        font-size: 12px;
     }
 }
 

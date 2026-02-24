@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "User")
+@Table(name = "MSG_USER")
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,8 +22,11 @@ public class User {
 
     private String posName;
 
-    // Department 객체 대신 String으로 deptId만 저장 (다른 DB이므로 FK 불가)
     private String deptId;
+
+    // DB에 저장하지 않고 로그인 시 부서 테이블에서 조회하여 채움
+    @javax.persistence.Transient
+    private String deptName;
 
     // 이름 + 직책명 조합
     public String getDisplayName() {

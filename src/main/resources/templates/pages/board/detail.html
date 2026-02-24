@@ -11,20 +11,27 @@
 <body>
     <th:block th:fragment="pageHeader">
         <div class="topbar topbar--center">
+            <a th:href="@{/board(categoryId=${board.category != null ? board.category.id : ''})}"
+               class="topbar__btn" aria-label="목록으로">
+                <span class="ico ico--back" aria-hidden="true"></span>
+            </a>
             <h1 class="topbar__title">게시글</h1>
-            <button class="topbar__btn" type="button" onclick="toggleMenu()" aria-label="메뉴" th:if="${currentUser != null && board.userId == currentUser.userId}">
-                <span class="ico ico--menu" aria-hidden="true"></span>
-            </button>
-        </div>
-
-        <div id="actionMenu" class="action-menu" style="display: none;" th:if="${currentUser != null && board.userId == currentUser.userId}">
-            <a th:href="@{/board/edit/{id}(id=${board.id})}" class="action-menu__item">수정</a>
-            <button type="button" onclick="deletePost()" class="action-menu__item action-menu__item--danger">삭제</button>
+            <div class="topbar__menu-wrap" th:if="${currentUser != null && board.userId == currentUser.userId}">
+                <button class="topbar__btn" type="button" onclick="toggleMenu()" aria-label="메뉴">
+                    <span class="ico ico--menu" aria-hidden="true"></span>
+                </button>
+                <div id="actionMenu" class="action-menu" style="display: none;">
+                    <a th:href="@{/board/edit/{id}(id=${board.id})}" class="action-menu__item">수정</a>
+                    <button type="button" onclick="deletePost()" class="action-menu__item action-menu__item--danger">삭제</button>
+                </div>
+            </div>
+            <div class="topbar__spacer" th:unless="${currentUser != null && board.userId == currentUser.userId}"></div>
         </div>
     </th:block>
 
     <th:block th:fragment="pageBody">
         <main class="page">
+            <button type="button" id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()" aria-label="최상단으로 이동"></button>
             <article class="board-detail">
                 <header class="board-detail__header">
                     <h2 class="board-detail__title" th:text="${board.title}">제목</h2>
@@ -107,6 +114,23 @@
 
     <th:block th:fragment="pageScripts">
         <script th:inline="javascript">
+            // 최상단 이동 플로팅 버튼
+            (function() {
+                const btn = document.getElementById('scrollTopBtn');
+                window.addEventListener('scroll', function() {
+                    const scrollY = window.scrollY || window.pageYOffset || 0;
+                    if (scrollY > 300) {
+                        btn.classList.add('scroll-top-btn--visible');
+                    } else {
+                        btn.classList.remove('scroll-top-btn--visible');
+                    }
+                }, { passive: true });
+            })();
+
+            function scrollToTop() {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
             function toggleMenu() {
                 const menu = document.getElementById('actionMenu');
                 menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
@@ -121,7 +145,7 @@
             document.addEventListener('click', function(e) {
                 const menu = document.getElementById('actionMenu');
                 const menuBtn = document.querySelector('[onclick="toggleMenu()"]');
-                if (menu.style.display !== 'none' && !menu.contains(e.target) && e.target !== menuBtn) {
+                if (menu && menu.style.display !== 'none' && !menu.contains(e.target) && !menuBtn.contains(e.target)) {
                     menu.style.display = 'none';
                 }
             });

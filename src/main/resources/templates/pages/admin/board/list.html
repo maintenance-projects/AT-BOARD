@@ -38,20 +38,44 @@
             <div class="admin-header">
                 <h2>게시물 관리</h2>
                 <div class="admin-header__actions">
-                    <select onchange="location.href='/admin/boards?categoryId=' + this.value" class="form-input" style="width: 200px; margin-right: 10px;">
-                        <option value="">전체 게시판</option>
-                        <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}" th:selected="${categoryId != null && categoryId == cat.id}">게시판</option>
-                    </select>
                     <a th:href="@{/admin/boards/write(categoryId=${categoryId})}" class="btn btn--primary">새 게시물 작성</a>
                 </div>
             </div>
 
             <div class="admin-content">
-                <div th:if="${boards.isEmpty()}" class="empty-state">
-                    <p>등록된 게시물이 없습니다.</p>
+                <!-- 검색바 -->
+                <form class="admin-search-bar" action="/admin/boards" method="get">
+                    <select name="categoryId" class="form-input admin-search-bar__select">
+                        <option value="">전체 게시판</option>
+                        <option th:each="cat : ${categories}"
+                                th:value="${cat.id}"
+                                th:text="${cat.name}"
+                                th:selected="${categoryId != null && categoryId == cat.id}">게시판</option>
+                    </select>
+                    <select name="searchType" class="form-input admin-search-bar__type">
+                        <option value="all"     th:selected="${searchType == 'all'}">제목+내용</option>
+                        <option value="title"   th:selected="${searchType == 'title'}">제목</option>
+                        <option value="content" th:selected="${searchType == 'content'}">내용</option>
+                        <option value="author"  th:selected="${searchType == 'author'}">작성자</option>
+                    </select>
+                    <input class="form-input admin-search-bar__input" type="text" name="keyword"
+                           th:value="${keyword}" placeholder="검색어 입력" maxlength="100" />
+                    <button type="submit" class="btn btn--primary">검색</button>
+                    <a th:if="${(keyword != null && !#strings.isEmpty(keyword)) || categoryId != null}"
+                       href="/admin/boards" class="btn btn--secondary">초기화</a>
+                </form>
+
+                <!-- 검색 결과 안내 -->
+                <div th:if="${keyword != null && !#strings.isEmpty(keyword)}" class="admin-search-result">
+                    "<span th:text="${keyword}"></span>" 검색 결과
+                    <strong th:text="${boards.totalElements} + '건'"></strong>
                 </div>
 
-                <div th:unless="${boards.isEmpty()}" class="admin-table-container">
+                <div th:if="${boards.totalElements == 0}" class="empty-state">
+                    <p th:text="${keyword != null && !#strings.isEmpty(keyword)} ? '검색 결과가 없습니다.' : '등록된 게시물이 없습니다.'">등록된 게시물이 없습니다.</p>
+                </div>
+
+                <div th:unless="${boards.totalElements == 0}" class="admin-table-container">
                     <table class="admin-table">
                         <thead>
                             <tr>
@@ -65,13 +89,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="board : ${boards}">
+                            <tr th:each="board : ${boards.content}">
                                 <td th:text="${board.id}">1</td>
                                 <td>
                                     <a th:href="@{/admin/boards/{id}(id=${board.id})}" th:text="${board.title}" class="link">제목</a>
                                 </td>
                                 <td th:text="${board.authorName}">작성자</td>
-                                <td><span class="badge badge--secondary" th:text="${board.category.name}">게시판</span></td>
+                                <td><span class="badge badge--secondary" th:text="${board.category != null ? board.category.name : '-'}">게시판</span></td>
                                 <td th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</td>
                                 <td th:text="${board.viewCount}">0</td>
                                 <td>
@@ -82,6 +106,39 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- 페이징 -->
+                <div class="admin-pagination" th:if="${boards.totalPages > 1}">
+                    <a th:if="${boards.hasPrevious()}"
+                       th:href="@{/admin/boards(page=${boards.number - 1}, categoryId=${categoryId}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                       class="btn btn--sm btn--secondary">&laquo;</a>
+                    <span th:unless="${boards.hasPrevious()}" class="btn btn--sm btn--secondary admin-pagination__disabled">&laquo;</span>
+
+                    <th:block th:with="startPage=${T(java.lang.Math).max(0, boards.number - 2)}, endPage=${T(java.lang.Math).min(boards.totalPages - 1, boards.number + 2)}">
+                        <a th:if="${startPage > 0}"
+                           th:href="@{/admin/boards(page=0, categoryId=${categoryId}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                           class="btn btn--sm btn--secondary">1</a>
+                        <span th:if="${startPage > 1}" class="admin-pagination__ellipsis">…</span>
+
+                        <th:block th:each="i : ${#numbers.sequence(startPage, endPage)}">
+                            <a th:if="${i != boards.number}"
+                               th:href="@{/admin/boards(page=${i}, categoryId=${categoryId}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                               th:text="${i + 1}" class="btn btn--sm btn--secondary"></a>
+                            <span th:if="${i == boards.number}"
+                                  th:text="${i + 1}" class="btn btn--sm btn--primary"></span>
+                        </th:block>
+
+                        <span th:if="${endPage < boards.totalPages - 2}" class="admin-pagination__ellipsis">…</span>
+                        <a th:if="${endPage < boards.totalPages - 1}"
+                           th:href="@{/admin/boards(page=${boards.totalPages - 1}, categoryId=${categoryId}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                           th:text="${boards.totalPages}" class="btn btn--sm btn--secondary"></a>
+                    </th:block>
+
+                    <a th:if="${boards.hasNext()}"
+                       th:href="@{/admin/boards(page=${boards.number + 1}, categoryId=${categoryId}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                       class="btn btn--sm btn--secondary">&raquo;</a>
+                    <span th:unless="${boards.hasNext()}" class="btn btn--sm btn--secondary admin-pagination__disabled">&raquo;</span>
                 </div>
             </div>
         </main>

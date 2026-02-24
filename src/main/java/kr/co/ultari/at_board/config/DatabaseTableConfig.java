@@ -26,5 +26,6 @@ public class DatabaseTableConfig {
         private String name = "MSG_DEPT";
         private String deptId = "DEPT_ID";
         private String deptName = "DEPT_NAME";
+        private String parentDept = "PARENT_DEPT";
     }
 }

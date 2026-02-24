@@ -19,7 +19,9 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final BoardRepository boardRepository;
+    private final DepartmentService departmentService;
 
+    @Transactional(value = "primaryTransactionManager", readOnly = true)
     public List<Comment> getCommentsByBoard(Board board) {
         return commentRepository.findByBoardOrderByCreatedAtAsc(board);
     }
@@ -31,6 +33,9 @@ public class CommentService {
                 .userId(author.getUserId())
                 .authorName(author.getUserName())
                 .authorPosName(author.getPosName())
+                .authorDeptName(author.getDeptName() != null
+                        ? author.getDeptName()
+                        : departmentService.getDeptName(author.getDeptId()))
                 .content(content)
                 .build();
 

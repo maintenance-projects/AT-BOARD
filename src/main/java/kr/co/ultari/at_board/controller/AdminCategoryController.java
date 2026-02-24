@@ -2,7 +2,7 @@ package kr.co.ultari.at_board.controller;
 
 import kr.co.ultari.at_board.model.primary.Admin;
 import kr.co.ultari.at_board.model.primary.BoardCategory;
-import kr.co.ultari.at_board.model.secondary.Department;
+import kr.co.ultari.at_board.model.secondary.Dept;
 import kr.co.ultari.at_board.repository.secondary.DepartmentRepository;
 import kr.co.ultari.at_board.service.BoardCategoryService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import javax.servlet.http.HttpSession;
 import java.util.List;
@@ -23,16 +26,27 @@ public class AdminCategoryController {
     private final BoardCategoryService boardCategoryService;
     private final DepartmentRepository departmentRepository;
 
+    private static final int PAGE_SIZE = 15;
+
     @GetMapping
-    public String list(Model model, HttpSession session) {
+    public String list(@RequestParam(defaultValue = "0") int page,
+                       @RequestParam(required = false) String keyword,
+                       Model model,
+                       HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
         if (admin == null) {
             return "redirect:/admin/login";
         }
 
-        List<BoardCategory> categories = boardCategoryService.getAllCategories();
+        PageRequest pageable = PageRequest.of(page, PAGE_SIZE);
+        boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
+        Page<BoardCategory> categories = hasKeyword
+                ? boardCategoryService.searchCategoriesByName(keyword, pageable)
+                : boardCategoryService.getAllCategoriesPaged(pageable);
+
         model.addAttribute("admin", admin);
         model.addAttribute("categories", categories);
+        model.addAttribute("keyword", keyword);
 
         return "pages/admin/category/list";
     }
@@ -44,10 +58,11 @@ public class AdminCategoryController {
             return "redirect:/admin/login";
         }
 
-        List<Department> departments = departmentRepository.findAll();
+        List<Dept> departments = departmentRepository.findAll();
         model.addAttribute("admin", admin);
         model.addAttribute("departments", departments);
         model.addAttribute("category", new BoardCategory());
+        model.addAttribute("selectedDeptIds", new java.util.HashSet<String>());
         model.addAttribute("isEdit", false);
 
         return "pages/admin/category/form";
@@ -56,8 +71,8 @@ public class AdminCategoryController {
     @PostMapping("/new")
     public String create(@RequestParam String name,
                          @RequestParam(required = false) String description,
-                         @RequestParam(required = false) String departmentId,
-                         @RequestParam(defaultValue = "true") Boolean isActive,
+                         @RequestParam(required = false) List<String> deptIds,
+                         @RequestParam(defaultValue = "false") Boolean isActive,
                          @RequestParam(defaultValue = "false") Boolean adminOnly,
                          HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
@@ -65,10 +80,11 @@ public class AdminCategoryController {
             return "redirect:/admin/login";
         }
 
+        java.util.Set<String> deptIdSet = deptIds != null ? new java.util.HashSet<>(deptIds) : new java.util.HashSet<>();
         BoardCategory category = BoardCategory.builder()
                 .name(name)
                 .description(description)
-                .deptId(departmentId != null && !departmentId.isEmpty() ? departmentId : null)
+                .deptIds(deptIdSet)
                 .isActive(isActive)
                 .adminOnly(adminOnly)
                 .build();
@@ -92,10 +108,11 @@ public class AdminCategoryController {
             return "redirect:/admin/categories";
         }
 
-        List<Department> departments = departmentRepository.findAll();
+        List<Dept> departments = departmentRepository.findAll();
         model.addAttribute("admin", admin);
         model.addAttribute("departments", departments);
         model.addAttribute("category", category);
+        model.addAttribute("selectedDeptIds", category.getDeptIds());
         model.addAttribute("isEdit", true);
 
         return "pages/admin/category/form";
@@ -105,8 +122,9 @@ public class AdminCategoryController {
     public String update(@PathVariable Long id,
                          @RequestParam String name,
                          @RequestParam(required = false) String description,
-                         @RequestParam(defaultValue = "true") Boolean isActive,
+                         @RequestParam(defaultValue = "false") Boolean isActive,
                          @RequestParam(defaultValue = "false") Boolean adminOnly,
+                         @RequestParam(required = false) List<String> deptIds,
                          HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
         if (admin == null) {
@@ -122,6 +140,7 @@ public class AdminCategoryController {
         category.setDescription(description);
         category.setIsActive(isActive);
         category.setAdminOnly(adminOnly);
+        category.setDeptIds(deptIds != null ? new java.util.HashSet<>(deptIds) : new java.util.HashSet<>());
 
         boardCategoryService.updateCategory(id, category);
 

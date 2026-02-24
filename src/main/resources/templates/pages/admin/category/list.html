@@ -43,12 +43,27 @@
             </div>
 
             <div class="admin-content">
-                <div th:if="${categories.isEmpty()}" class="empty-state">
-                    <p>등록된 게시판이 없습니다.</p>
-                    <a href="/admin/categories/new" class="btn btn--primary">첫 게시판 만들기</a>
+                <!-- 검색바 -->
+                <form class="admin-search-bar" action="/admin/categories" method="get">
+                    <input class="form-input admin-search-bar__input" type="text" name="keyword"
+                           th:value="${keyword}" placeholder="게시판명 검색" maxlength="100" />
+                    <button type="submit" class="btn btn--primary">검색</button>
+                    <a th:if="${keyword != null && !#strings.isEmpty(keyword)}"
+                       href="/admin/categories" class="btn btn--secondary">초기화</a>
+                </form>
+
+                <!-- 검색 결과 안내 -->
+                <div th:if="${keyword != null && !#strings.isEmpty(keyword)}" class="admin-search-result">
+                    "<span th:text="${keyword}"></span>" 검색 결과
+                    <strong th:text="${categories.totalElements} + '건'"></strong>
                 </div>
 
-                <div th:unless="${categories.isEmpty()}" class="admin-table-container">
+                <div th:if="${categories.totalElements == 0}" class="empty-state">
+                    <p th:text="${keyword != null && !#strings.isEmpty(keyword)} ? '검색 결과가 없습니다.' : '등록된 게시판이 없습니다.'">등록된 게시판이 없습니다.</p>
+                    <a th:if="${keyword == null || #strings.isEmpty(keyword)}" href="/admin/categories/new" class="btn btn--primary">첫 게시판 만들기</a>
+                </div>
+
+                <div th:unless="${categories.totalElements == 0}" class="admin-table-container">
                     <table class="admin-table">
                         <thead>
                             <tr>
@@ -63,15 +78,21 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="category : ${categories}">
+                            <tr th:each="category : ${categories.content}">
                                 <td th:text="${category.id}">1</td>
-                                <td><strong th:text="${category.name}">게시판명</strong></td>
+                                <td><a th:href="@{/admin/boards(categoryId=${category.id})}" th:text="${category.name}" class="link" style="font-weight: 600;">게시판명</a></td>
                                 <td th:text="${category.description}">설명</td>
                                 <td>
-                                    <span th:if="${category.deptId == null}" class="badge badge--primary">전사 공용</span>
-                                    <span th:unless="${category.deptId == null}" class="badge badge--secondary">부서 전용</span>
+                                    <span th:if="${category.deptSpecific}" class="badge badge--secondary">부서 전용</span>
+                                    <span th:unless="${category.deptSpecific}" class="badge badge--primary">전사 공용</span>
                                 </td>
-                                <td th:text="${category.deptId != null ? category.deptId : '-'}">-</td>
+                                <td>
+                                    <span th:unless="${category.deptSpecific}">-</span>
+                                    <th:block th:if="${category.deptSpecific}">
+                                        <span th:each="dId : ${category.deptIds}" th:text="${dId}"
+                                              class="badge badge--secondary" style="font-size:0.75rem; margin:1px;"></span>
+                                    </th:block>
+                                </td>
                                 <td>
                                     <span th:if="${category.adminOnly}" class="badge badge--danger">관리자 전용</span>
                                     <span th:unless="${category.adminOnly}" class="badge badge--success">전체</span>
@@ -91,6 +112,39 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- 페이징 -->
+                <div class="admin-pagination" th:if="${categories.totalPages > 1}">
+                    <a th:if="${categories.hasPrevious()}"
+                       th:href="@{/admin/categories(page=${categories.number - 1}, keyword=${keyword})}"
+                       class="btn btn--sm btn--secondary">&laquo;</a>
+                    <span th:unless="${categories.hasPrevious()}" class="btn btn--sm btn--secondary admin-pagination__disabled">&laquo;</span>
+
+                    <th:block th:with="startPage=${T(java.lang.Math).max(0, categories.number - 2)}, endPage=${T(java.lang.Math).min(categories.totalPages - 1, categories.number + 2)}">
+                        <a th:if="${startPage > 0}"
+                           th:href="@{/admin/categories(page=0, keyword=${keyword})}"
+                           class="btn btn--sm btn--secondary">1</a>
+                        <span th:if="${startPage > 1}" class="admin-pagination__ellipsis">…</span>
+
+                        <th:block th:each="i : ${#numbers.sequence(startPage, endPage)}">
+                            <a th:if="${i != categories.number}"
+                               th:href="@{/admin/categories(page=${i}, keyword=${keyword})}"
+                               th:text="${i + 1}" class="btn btn--sm btn--secondary"></a>
+                            <span th:if="${i == categories.number}"
+                                  th:text="${i + 1}" class="btn btn--sm btn--primary"></span>
+                        </th:block>
+
+                        <span th:if="${endPage < categories.totalPages - 2}" class="admin-pagination__ellipsis">…</span>
+                        <a th:if="${endPage < categories.totalPages - 1}"
+                           th:href="@{/admin/categories(page=${categories.totalPages - 1}, keyword=${keyword})}"
+                           th:text="${categories.totalPages}" class="btn btn--sm btn--secondary"></a>
+                    </th:block>
+
+                    <a th:if="${categories.hasNext()}"
+                       th:href="@{/admin/categories(page=${categories.number + 1}, keyword=${keyword})}"
+                       class="btn btn--sm btn--secondary">&raquo;</a>
+                    <span th:unless="${categories.hasNext()}" class="btn btn--sm btn--secondary admin-pagination__disabled">&raquo;</span>
                 </div>
             </div>
         </main>

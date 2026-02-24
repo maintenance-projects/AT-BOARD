@@ -13,10 +13,9 @@
 <body>
     <th:block th:fragment="pageHeader">
         <div class="topbar topbar--center">
+            <div class="topbar__spacer"></div>
             <h1 class="topbar__title">글쓰기</h1>
-            <button class="topbar__btn" type="button" onclick="submitForm()" aria-label="완료">
-                <span class="topbar__text">완료</span>
-            </button>
+            <div class="topbar__spacer"></div>
         </div>
     </th:block>
 
@@ -58,7 +57,6 @@
                         id="content"
                         name="content"
                         style="display: none;"
-                        required
                     ></textarea>
                 </div>
 
@@ -167,7 +165,7 @@
             });
 
             function submitForm() {
-                document.getElementById('writeForm').submit();
+                document.getElementById('writeForm').querySelector('[type="submit"]').click();
             }
         </script>
     </th:block>

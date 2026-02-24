@@ -55,20 +55,11 @@
                             <textarea id="description" name="description" class="form-textarea" th:text="${category.description}" placeholder="게시판에 대한 간단한 설명" rows="3"></textarea>
                         </div>
 
-                        <div class="form-group" th:if="${!isEdit}">
-                            <label for="departmentId" class="form-label">부서 (선택 안 하면 전사 공용)</label>
-                            <select id="departmentId" name="departmentId" class="form-input">
-                                <option value="">전사 공용 게시판</option>
-                                <option th:each="dept : ${departments}" th:value="${dept.deptId}" th:text="${dept.deptName + ' (' + dept.deptId + ')'}">부서명</option>
-                            </select>
-                            <small class="form-help">부서를 선택하면 해당 부서 전용 게시판이 됩니다.</small>
-                        </div>
-
-                        <div class="form-group" th:if="${isEdit && category.deptId != null}">
-                            <label class="form-label">부서</label>
-                            <div class="form-static">
-                                <span class="badge badge--secondary" th:text="${category.deptName + ' (' + category.deptId + ')'}">부서명</span>
-                                <small class="form-help">부서 전용 게시판의 부서는 변경할 수 없습니다.</small>
+                        <div class="form-group">
+                            <label class="form-label">접근 부서</label>
+                            <small class="form-help">부서를 선택하면 해당 부서(및 하위 부서) 사용자만 이 게시판에 접근할 수 있습니다. 선택하지 않으면 전사 공용 게시판이 됩니다.</small>
+                            <div class="dept-tree" id="dept-tree">
+                                <em style="color: #aaa; font-size: 0.9rem; padding: 8px 0; display: block;">부서 목록을 불러오는 중...</em>
                             </div>
                         </div>
 
@@ -99,5 +90,144 @@
     </div>
 
     <script src="/pages/admin/admin.js"></script>
+    <script th:inline="javascript">
+    /*<![CDATA[*/
+    (function() {
+        var departments = /*[[${departments}]]*/ [];
+        var selectedDeptIds = /*[[${selectedDeptIds}]]*/ [];
+
+        function buildTree(depts) {
+            var map = {};
+            var roots = [];
+            depts.forEach(function(d) {
+                map[d.deptId] = { deptId: d.deptId, deptName: d.deptName, parentDept: d.parentDept, children: [] };
+            });
+            depts.forEach(function(d) {
+                if (d.parentDept && map[d.parentDept]) {
+                    map[d.parentDept].children.push(map[d.deptId]);
+                } else {
+                    roots.push(map[d.deptId]);
+                }
+            });
+            return { roots: roots, map: map };
+        }
+
+        // 하위 부서를 강제 체크/해제 (상위 체크 시 하위는 disabled 상태로 체크)
+        function setDescendantsForced(node, map, forced) {
+            if (!node.children) return;
+            node.children.forEach(function(child) {
+                var cb = document.querySelector('input[name="deptIds"][value="' + child.deptId + '"]');
+                if (cb) {
+                    var label = cb.parentElement;
+                    if (forced) {
+                        cb.checked = true;
+                        cb.disabled = true;
+                        label.classList.add('dept-tree__label--inherited');
+                    } else {
+                        cb.checked = false;
+                        cb.disabled = false;
+                        label.classList.remove('dept-tree__label--inherited');
+                    }
+                }
+                setDescendantsForced(child, map, forced);
+            });
+        }
+
+        function renderNode(node, map) {
+            var li = document.createElement('li');
+            li.className = 'dept-tree__item';
+
+            var row = document.createElement('div');
+            row.className = 'dept-tree__row';
+
+            var hasChildren = node.children && node.children.length > 0;
+            var childrenEl = null;
+
+            if (hasChildren) {
+                childrenEl = document.createElement('ul');
+                childrenEl.className = 'dept-tree__children dept-tree__children--open';
+                node.children.forEach(function(child) {
+                    childrenEl.appendChild(renderNode(child, map));
+                });
+            }
+
+            var toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.className = 'dept-tree__toggle' + (hasChildren ? '' : ' dept-tree__toggle--hidden');
+            toggleBtn.textContent = hasChildren ? '\u25bc' : '';
+            if (hasChildren) {
+                (function(btn, el) {
+                    btn.onclick = function() {
+                        var open = el.classList.contains('dept-tree__children--open');
+                        el.classList.toggle('dept-tree__children--open', !open);
+                        btn.textContent = open ? '\u25ba' : '\u25bc';
+                    };
+                })(toggleBtn, childrenEl);
+            }
+
+            var label = document.createElement('label');
+            label.className = 'dept-tree__label';
+
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.name = 'deptIds';
+            cb.value = node.deptId;
+            if (selectedDeptIds.indexOf(node.deptId) !== -1) {
+                cb.checked = true;
+            }
+
+            // 상위 체크 시 하위 부서 강제 체크 (해제 불가)
+            (function(n, m) {
+                cb.onchange = function() {
+                    setDescendantsForced(n, m, cb.checked);
+                };
+            })(node, map);
+
+            var nameText = document.createTextNode('\u00a0' + node.deptName + ' (' + node.deptId + ')');
+
+            label.appendChild(cb);
+            label.appendChild(nameText);
+            row.appendChild(toggleBtn);
+            row.appendChild(label);
+            li.appendChild(row);
+
+            if (childrenEl) {
+                li.appendChild(childrenEl);
+            }
+
+            return li;
+        }
+
+        function renderTree() {
+            var container = document.getElementById('dept-tree');
+            if (!container) return;
+
+            if (!departments || departments.length === 0) {
+                container.innerHTML = '<p style="color:#999; padding:8px 0; font-size:0.9rem;">등록된 부서가 없습니다.</p>';
+                return;
+            }
+
+            var result = buildTree(departments);
+            var ul = document.createElement('ul');
+            ul.className = 'dept-tree__list';
+            result.roots.forEach(function(root) {
+                ul.appendChild(renderNode(root, result.map));
+            });
+            container.innerHTML = '';
+            container.appendChild(ul);
+
+            // 편집 모드: 이미 선택된 부서의 하위 부서 강제 체크 적용
+            selectedDeptIds.forEach(function(deptId) {
+                var node = result.map[deptId];
+                if (node) {
+                    setDescendantsForced(node, result.map, true);
+                }
+            });
+        }
+
+        renderTree();
+    })();
+    /*]]>*/
+    </script>
 </body>
 </html>

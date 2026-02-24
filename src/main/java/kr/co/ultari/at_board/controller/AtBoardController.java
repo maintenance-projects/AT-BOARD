@@ -22,10 +22,8 @@ public class AtBoardController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
-    @RequestMapping("/{key}")
-    public String index(Model model, @PathVariable("key") String userId) {
-        log.info(userId);
-        model.addAttribute("userId", userId);
-        return "index";
+    @GetMapping("/menu")
+    public String menu() {
+        return "pages/menu/index";
     }
 }

@@ -19,9 +19,13 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/board")
@@ -38,6 +42,8 @@ public class BoardController {
     public String list(@RequestParam(required = false) Long categoryId,
                        @RequestParam(defaultValue = "0") int page,
                        @RequestParam(defaultValue = "20") int size,
+                       @RequestParam(required = false, defaultValue = "all") String searchType,
+                       @RequestParam(required = false) String keyword,
                        Model model,
                        HttpSession session) {
         User currentUser = (User) session.getAttribute("currentUser");
@@ -45,12 +51,12 @@ public class BoardController {
             return "redirect:/board";
         }
 
-        // 사용자가 볼 수 있는 게시판 목록
+        // 사용자가 볼 수 있는 게시판 목록 (전사 가나다순 > 부서 가나다순)
         List<BoardCategory> categories = boardCategoryService.getCompanyWideCategories();
-        BoardCategory deptCategory = boardCategoryService.getCategoryByDeptId(currentUser.getDeptId());
-        if (deptCategory != null) {
-            categories.add(0, deptCategory);
-        }
+        categories.sort(Comparator.comparing(BoardCategory::getName));
+        List<BoardCategory> deptCategories = boardCategoryService.getDeptCategoriesForUser(currentUser.getDeptId());
+        deptCategories.sort(Comparator.comparing(BoardCategory::getName));
+        categories.addAll(deptCategories);
 
         // 게시판이 없으면 에러
         if (categories.isEmpty()) {
@@ -71,20 +77,25 @@ public class BoardController {
             return "redirect:/board?categoryId=" + categories.get(0).getId();
         }
 
-        // 권한 체크: 부서 게시판이면 같은 부서만 조회 가능
-        if (selectedCategory.getDeptId() != null &&
-                !selectedCategory.getDeptId().equals(currentUser.getDeptId())) {
+        // 권한 체크: 접근 가능한 게시판인지 확인
+        boolean canAccess = categories.stream().anyMatch(c -> c.getId().equals(selectedCategory.getId()));
+        if (!canAccess) {
             return "redirect:/board?categoryId=" + categories.get(0).getId();
         }
 
-        // 페이징 처리
+        // 검색 또는 일반 페이징
         Pageable pageable = PageRequest.of(page, size);
-        Page<Board> boardsPage = boardService.getBoardsByCategoryIdPaged(categoryId, pageable);
+        boolean isSearching = keyword != null && !keyword.trim().isEmpty();
+        Page<Board> boardsPage = isSearching
+                ? boardService.searchBoards(categoryId, searchType, keyword, pageable)
+                : boardService.getBoardsByCategoryIdPaged(categoryId, pageable);
 
         model.addAttribute("boards", boardsPage);
         model.addAttribute("categories", categories);
         model.addAttribute("selectedCategory", selectedCategory);
         model.addAttribute("currentUser", currentUser);
+        model.addAttribute("searchType", searchType);
+        model.addAttribute("keyword", keyword);
         return "pages/board/list";
     }
 
@@ -95,6 +106,8 @@ public class BoardController {
             @RequestParam Long categoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false, defaultValue = "all") String searchType,
+            @RequestParam(required = false) String keyword,
             HttpSession session) {
         User currentUser = (User) session.getAttribute("currentUser");
         if (currentUser == null) {
@@ -106,17 +119,36 @@ public class BoardController {
             return ResponseEntity.notFound().build();
         }
 
-        // 권한 체크
-        if (selectedCategory.getDeptId() != null &&
-                !selectedCategory.getDeptId().equals(currentUser.getDeptId())) {
+        // 권한 체크: 부서 계층 구조를 고려한 접근 가능 게시판 목록으로 확인
+        List<BoardCategory> accessibleCategories = boardCategoryService.getCompanyWideCategories();
+        accessibleCategories.addAll(boardCategoryService.getDeptCategoriesForUser(currentUser.getDeptId()));
+        boolean canAccess = accessibleCategories.stream().anyMatch(c -> c.getId().equals(categoryId));
+        if (!canAccess) {
             return ResponseEntity.status(403).build();
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<Board> boardsPage = boardService.getBoardsByCategoryIdPaged(categoryId, pageable);
+        boolean isSearching = keyword != null && !keyword.trim().isEmpty();
+        Page<Board> boardsPage = isSearching
+                ? boardService.searchBoards(categoryId, searchType, keyword, pageable)
+                : boardService.getBoardsByCategoryIdPaged(categoryId, pageable);
+
+        // Board 엔티티를 직접 직렬화하면 Hibernate 프록시 문제가 발생하므로 필요한 필드만 Map으로 변환
+        List<Map<String, Object>> boardDtos = boardsPage.getContent().stream().map(board -> {
+            Map<String, Object> dto = new HashMap<>();
+            dto.put("id", board.getId());
+            dto.put("title", board.getTitle());
+            dto.put("authorName", board.getAuthorName());
+            dto.put("createdAt", board.getCreatedAt());
+            dto.put("content", board.getContent());
+            dto.put("likeCount", board.getLikeCount());
+            dto.put("commentCount", board.getCommentCount());
+            dto.put("viewCount", board.getViewCount());
+            return dto;
+        }).collect(Collectors.toList());
 
         Map<String, Object> response = new HashMap<>();
-        response.put("content", boardsPage.getContent());
+        response.put("content", boardDtos);
         response.put("totalPages", boardsPage.getTotalPages());
         response.put("totalElements", boardsPage.getTotalElements());
         response.put("currentPage", boardsPage.getNumber());
@@ -133,7 +165,24 @@ public class BoardController {
             return "redirect:/board";
         }
 
-        Board board = boardService.getBoardByIdForUser(id, currentUser);
+        // 세션 기반 조회수 중복 방지: 이 세션에서 이미 본 게시글이면 카운트 증가 안 함
+        @SuppressWarnings("unchecked")
+        Set<Long> viewedBoards = (Set<Long>) session.getAttribute("viewedBoards");
+        if (viewedBoards == null) {
+            viewedBoards = new HashSet<>();
+            session.setAttribute("viewedBoards", viewedBoards);
+        }
+
+        Board board;
+        if (viewedBoards.contains(id)) {
+            board = boardService.getBoardByIdForUserNoCount(id, currentUser);
+        } else {
+            board = boardService.getBoardByIdForUser(id, currentUser);
+            if (board != null) {
+                viewedBoards.add(id);
+            }
+        }
+
         if (board == null) {
             return "redirect:/board";
         }
@@ -160,12 +209,12 @@ public class BoardController {
             return "redirect:/board";
         }
 
-        // 사용자가 글을 작성할 수 있는 카테고리 목록 (adminOnly 제외)
+        // 사용자가 글을 작성할 수 있는 카테고리 목록 (adminOnly 제외, 전사 가나다순 > 부서 가나다순)
         List<BoardCategory> categories = boardCategoryService.getCompanyWideCategories();
-        BoardCategory deptCategory = boardCategoryService.getCategoryByDeptId(currentUser.getDeptId());
-        if (deptCategory != null) {
-            categories.add(0, deptCategory);
-        }
+        categories.sort(Comparator.comparing(BoardCategory::getName));
+        List<BoardCategory> deptCategories = boardCategoryService.getDeptCategoriesForUser(currentUser.getDeptId());
+        deptCategories.sort(Comparator.comparing(BoardCategory::getName));
+        categories.addAll(deptCategories);
 
         // adminOnly 게시판 제외
         categories.removeIf(cat -> cat.getAdminOnly() != null && cat.getAdminOnly());
@@ -214,7 +263,7 @@ public class BoardController {
             return "redirect:/board";
         }
 
-        Board board = boardService.getBoardByIdForUser(id, currentUser);
+        Board board = boardService.getBoardByIdNoCount(id);
         if (board == null || !board.getUserId().equals(currentUser.getUserId())) {
             return "redirect:/board";
         }

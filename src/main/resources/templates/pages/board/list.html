@@ -10,17 +10,22 @@
 
 <body>
     <th:block th:fragment="pageHeader">
-        <div class="topbar topbar--center">
-            <button class="topbar__btn" type="button" onclick="toggleCategoryMenu()" aria-label="메뉴">
+        <div class="topbar topbar--board">
+            <button class="topbar__btn topbar__btn--mobile-only" type="button" onclick="toggleCategoryMenu()" aria-label="메뉴">
                 <span class="ico ico--menu" aria-hidden="true"></span>
             </button>
             <h1 class="topbar__title" th:text="${selectedCategory != null ? selectedCategory.name : '게시판'}">게시판</h1>
-            <a th:if="${selectedCategory == null || selectedCategory.adminOnly == null || !selectedCategory.adminOnly}"
-               th:href="@{/board/write(categoryId=${selectedCategory != null ? selectedCategory.id : ''})}"
-               class="topbar__btn"
-               aria-label="글쓰기">
-                <span class="ico ico--write" aria-hidden="true"></span>
-            </a>
+            <div class="topbar__actions">
+                <button type="button" class="topbar__btn" id="searchToggleBtn" onclick="toggleSearchPanel()" aria-label="검색">
+                    <span class="ico ico--search" aria-hidden="true"></span>
+                </button>
+                <a th:if="${selectedCategory == null || selectedCategory.adminOnly == null || !selectedCategory.adminOnly}"
+                   th:href="@{/board/write(categoryId=${selectedCategory != null ? selectedCategory.id : ''})}"
+                   class="topbar__btn"
+                   aria-label="글쓰기">
+                    <span class="ico ico--write" aria-hidden="true"></span>
+                </a>
+            </div>
         </div>
 
         <!-- 게시판 목록 메뉴 -->
@@ -29,107 +34,222 @@
                 <h2>게시판 목록</h2>
                 <button type="button" onclick="toggleCategoryMenu()" class="category-menu__close">&times;</button>
             </div>
+            <!-- 접속자 정보 (모바일) -->
+            <div class="category-menu__user" th:if="${currentUser != null}">
+                <span class="board-sidebar__avatar" th:text="${#strings.substring(currentUser.userName, 0, 1)}">홍</span>
+                <div class="board-sidebar__user-info">
+                    <span class="board-sidebar__user-name" th:text="${currentUser.userName}">홍길동</span>
+                    <span class="board-sidebar__user-pos"
+                          th:if="${currentUser.posName != null && !#strings.isEmpty(currentUser.posName)}"
+                          th:text="${currentUser.posName}">팀장</span>
+                </div>
+            </div>
             <nav class="category-menu__list">
                 <a th:each="category : ${categories}"
                    th:href="@{/board(categoryId=${category.id})}"
                    th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? 'category-menu__item--active' : ''}"
-                   class="category-menu__item"
-                   th:text="${category.name}">게시판명</a>
+                   class="category-menu__item">
+                    <span th:text="${category.name}">게시판명</span>
+                    <span th:class="${category.deptSpecific ? 'cat-badge cat-badge--dept' : 'cat-badge cat-badge--company'}"
+                          th:text="${category.deptSpecific ? '부서' : '전사'}"></span>
+                </a>
             </nav>
         </div>
         <div id="categoryMenuOverlay" class="category-menu__overlay" style="display: none;" onclick="toggleCategoryMenu()"></div>
+
+        <!-- 검색 패널 (아코디언) -->
+        <div id="searchPanel" class="search-panel">
+            <form class="search-form" th:action="@{/board}" method="get">
+                <input type="hidden" name="categoryId" th:value="${selectedCategory?.id}" />
+                <select class="search-form__type" name="searchType">
+                    <option value="all"     th:selected="${searchType == 'all'}">제목+내용</option>
+                    <option value="title"   th:selected="${searchType == 'title'}">제목</option>
+                    <option value="content" th:selected="${searchType == 'content'}">내용</option>
+                    <option value="author"  th:selected="${searchType == 'author'}">작성자</option>
+                </select>
+                <div class="search-form__input-wrap">
+                    <input class="search-form__input" type="text" name="keyword"
+                           th:value="${keyword}" placeholder="검색어를 입력하세요"
+                           maxlength="100" id="searchKeywordInput" autocomplete="off" />
+                    <button class="search-form__submit" type="submit" aria-label="검색">
+                        <span class="ico ico--search" aria-hidden="true"></span>
+                    </button>
+                </div>
+                <button th:if="${keyword != null && !#strings.isEmpty(keyword)}"
+                        type="button" class="search-form__clear"
+                        th:onclick="'location.href=\'/board?categoryId=\' + ' + ${selectedCategory?.id}"
+                        aria-label="검색 초기화">&times;</button>
+            </form>
+        </div>
     </th:block>
 
     <th:block th:fragment="pageBody">
         <main class="page">
-            <section class="board-list" aria-label="게시글 목록">
-                <div th:if="${boards.totalElements == 0}" class="empty">
-                    <p class="empty__text">등록된 게시글이 없습니다.</p>
-                    <a href="/board/write" class="btn btn--primary">첫 글 작성하기</a>
+            <button type="button" id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()" aria-label="최상단으로 이동"></button>
+            <div class="board-layout">
+
+                <!-- PC 카테고리 사이드바 (≥1024px에서 표시) -->
+                <aside class="board-sidebar">
+                    <!-- 접속자 정보 -->
+                    <div class="board-sidebar__user" th:if="${currentUser != null}">
+                        <span class="board-sidebar__avatar" th:text="${#strings.substring(currentUser.userName, 0, 1)}">홍</span>
+                        <div class="board-sidebar__user-info">
+                            <span class="board-sidebar__user-dept" th:if="${currentUser.deptName != null && !#strings.isEmpty(currentUser.deptName)}"
+                                  th:text="${currentUser.deptName}">개발팀</span>
+                            <span class="board-sidebar__user-name" th:text="${currentUser.userName}">홍길동</span>
+                            <span class="board-sidebar__user-pos" th:if="${currentUser.posName != null && !#strings.isEmpty(currentUser.posName)}"
+                                  th:text="${currentUser.posName}">팀장</span>
+                        </div>
+                    </div>
+                    <h2 class="board-sidebar__title">게시판</h2>
+                    <nav>
+                        <a th:each="category : ${categories}"
+                           th:href="@{/board(categoryId=${category.id})}"
+                           th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? ' board-sidebar__item--active' : ''}"
+                           class="board-sidebar__item">
+                            <span th:text="${category.name}">게시판명</span>
+                            <span th:class="${category.deptSpecific ? 'cat-badge cat-badge--dept' : 'cat-badge cat-badge--company'}"
+                                  th:text="${category.deptSpecific ? '부서' : '전사'}"></span>
+                        </a>
+                    </nav>
+                </aside>
+
+                <!-- 게시글 목록 영역 -->
+                <div class="board-list-area">
+                    <!-- 검색 결과 안내 -->
+                    <div th:if="${keyword != null && !#strings.isEmpty(keyword)}" class="search-result-info">
+                        <span th:text="'&quot;' + ${keyword} + '&quot; 검색 결과 '"></span>
+                        <strong th:text="${boards.totalElements} + '건'"></strong>
+                    </div>
+
+                    <section class="board-list" aria-label="게시글 목록">
+                        <div th:if="${boards.totalElements == 0}" class="empty">
+                            <p class="empty__text">등록된 게시글이 없습니다.</p>
+                            <a href="/board/write" class="btn btn--primary">첫 글 작성하기</a>
+                        </div>
+
+                        <div th:unless="${boards.totalElements == 0}">
+                            <!-- 게시글 목록 -->
+                            <div class="board-items" id="boardItems">
+                                <article th:each="board : ${boards.content}" class="board-item" th:onclick="'location.href=\'/board/' + ${board.id} + '\''">
+                                    <div class="board-item__header">
+                                        <h2 class="board-item__title" th:text="${board.title}">제목</h2>
+                                        <div class="board-item__meta">
+                                            <span class="board-item__author" th:text="${board.authorName}">작성자</span>
+                                            <span class="board-item__dot">·</span>
+                                            <time class="board-item__date" th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
+                                        </div>
+                                    </div>
+                                    <p class="board-item__preview" th:text="${#strings.abbreviate(board.plainContent, 100)}">내용 미리보기</p>
+                                    <div class="board-item__footer">
+                                        <span class="board-item__stat">
+                                            <span class="ico ico--heart-outline" aria-hidden="true"></span>
+                                            <span th:text="${board.likeCount}">0</span>
+                                        </span>
+                                        <span class="board-item__stat">
+                                            <span class="ico ico--comment" aria-hidden="true"></span>
+                                            <span th:text="${board.commentCount}">0</span>
+                                        </span>
+                                        <span class="board-item__stat">
+                                            <span class="ico ico--view" aria-hidden="true"></span>
+                                            <span th:text="${board.viewCount}">0</span>
+                                        </span>
+                                    </div>
+                                </article>
+                            </div>
+
+                            <!-- PC용 페이징 -->
+                            <div class="pagination pagination--desktop" th:if="${boards.totalPages > 1}">
+                                <a th:if="${boards.hasPrevious()}"
+                                   th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.number - 1}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                                   class="pagination__btn">&laquo; 이전</a>
+                                <span th:unless="${boards.hasPrevious()}" class="pagination__btn pagination__btn--disabled">&laquo; 이전</span>
+
+                                <th:block th:with="startPage=${T(java.lang.Math).max(0, boards.number - 2)}, endPage=${T(java.lang.Math).min(boards.totalPages - 1, boards.number + 2)}">
+                                    <a th:if="${startPage > 0}"
+                                       th:href="@{/board(categoryId=${selectedCategory.id}, page=0, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                                       class="pagination__number">1</a>
+                                    <span th:if="${startPage > 1}" class="pagination__ellipsis">...</span>
+
+                                    <th:block th:each="i : ${#numbers.sequence(startPage, endPage)}">
+                                        <a th:if="${i != boards.number}"
+                                           th:href="@{/board(categoryId=${selectedCategory.id}, page=${i}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                                           th:text="${i + 1}"
+                                           class="pagination__number"></a>
+                                        <span th:if="${i == boards.number}"
+                                              th:text="${i + 1}"
+                                              class="pagination__number pagination__number--active"></span>
+                                    </th:block>
+
+                                    <span th:if="${endPage < boards.totalPages - 2}" class="pagination__ellipsis">...</span>
+                                    <a th:if="${endPage < boards.totalPages - 1}"
+                                       th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.totalPages - 1}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                                       th:text="${boards.totalPages}"
+                                       class="pagination__number"></a>
+                                </th:block>
+
+                                <a th:if="${boards.hasNext()}"
+                                   th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.number + 1}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
+                                   class="pagination__btn">다음 &raquo;</a>
+                                <span th:unless="${boards.hasNext()}" class="pagination__btn pagination__btn--disabled">다음 &raquo;</span>
+                            </div>
+
+                            <!-- 모바일용 무한 스크롤 로딩 인디케이터 -->
+                            <div class="loading-indicator pagination--mobile" style="display: none;">
+                                <div class="spinner"></div>
+                                <p>로딩 중...</p>
+                            </div>
+                        </div>
+                    </section>
                 </div>
 
-                <div th:unless="${boards.totalElements == 0}">
-                    <!-- 게시글 목록 -->
-                    <div class="board-items" id="boardItems">
-                        <article th:each="board : ${boards.content}" class="board-item" th:onclick="'location.href=\'/board/' + ${board.id} + '\''">
-                            <div class="board-item__header">
-                                <h2 class="board-item__title" th:text="${board.title}">제목</h2>
-                                <div class="board-item__meta">
-                                    <span class="board-item__author" th:text="${board.authorName}">작성자</span>
-                                    <span class="board-item__dot">·</span>
-                                    <time class="board-item__date" th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
-                                </div>
-                            </div>
-                            <p class="board-item__preview" th:text="${#strings.abbreviate(board.plainContent, 100)}">내용 미리보기</p>
-                            <div class="board-item__footer">
-                                <span class="board-item__stat">
-                                    <span class="ico ico--heart-outline" aria-hidden="true"></span>
-                                    <span th:text="${board.likeCount}">0</span>
-                                </span>
-                                <span class="board-item__stat">
-                                    <span class="ico ico--comment" aria-hidden="true"></span>
-                                    <span th:text="${board.commentCount}">0</span>
-                                </span>
-                                <span class="board-item__stat">
-                                    <span class="ico ico--view" aria-hidden="true"></span>
-                                    <span th:text="${board.viewCount}">0</span>
-                                </span>
-                            </div>
-                        </article>
-                    </div>
-
-                    <!-- PC용 페이징 -->
-                    <div class="pagination pagination--desktop" th:if="${boards.totalPages > 1}">
-                        <!-- 이전 페이지 -->
-                        <a th:if="${boards.hasPrevious()}"
-                           th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.number - 1})}"
-                           class="pagination__btn">&laquo; 이전</a>
-                        <span th:unless="${boards.hasPrevious()}" class="pagination__btn pagination__btn--disabled">&laquo; 이전</span>
-
-                        <!-- 페이지 번호 -->
-                        <th:block th:with="startPage=${T(Math).max(0, boards.number - 2)}, endPage=${T(Math).min(boards.totalPages - 1, boards.number + 2)}">
-                            <a th:if="${startPage > 0}"
-                               th:href="@{/board(categoryId=${selectedCategory.id}, page=0)}"
-                               class="pagination__number">1</a>
-                            <span th:if="${startPage > 1}" class="pagination__ellipsis">...</span>
-
-                            <th:block th:each="i : ${#numbers.sequence(startPage, endPage)}">
-                                <a th:if="${i != boards.number}"
-                                   th:href="@{/board(categoryId=${selectedCategory.id}, page=${i})}"
-                                   th:text="${i + 1}"
-                                   class="pagination__number"></a>
-                                <span th:if="${i == boards.number}"
-                                      th:text="${i + 1}"
-                                      class="pagination__number pagination__number--active"></span>
-                            </th:block>
-
-                            <span th:if="${endPage < boards.totalPages - 2}" class="pagination__ellipsis">...</span>
-                            <a th:if="${endPage < boards.totalPages - 1}"
-                               th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.totalPages - 1})}"
-                               th:text="${boards.totalPages}"
-                               class="pagination__number"></a>
-                        </th:block>
-
-                        <!-- 다음 페이지 -->
-                        <a th:if="${boards.hasNext()}"
-                           th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.number + 1})}"
-                           class="pagination__btn">다음 &raquo;</a>
-                        <span th:unless="${boards.hasNext()}" class="pagination__btn pagination__btn--disabled">다음 &raquo;</span>
-                    </div>
-
-                    <!-- 모바일용 무한 스크롤 로딩 인디케이터 -->
-                    <div class="loading-indicator pagination--mobile" style="display: none;">
-                        <div class="spinner"></div>
-                        <p>로딩 중...</p>
-                    </div>
-                </div>
-            </section>
+            </div>
         </main>
     </th:block>
 
     <th:block th:fragment="pageScripts">
         <script src="/pages/board/board.js"></script>
         <script th:inline="javascript">
+            // 최상단 이동 플로팅 버튼
+            (function() {
+                const btn = document.getElementById('scrollTopBtn');
+                window.addEventListener('scroll', function() {
+                    const scrollY = window.scrollY || window.pageYOffset || 0;
+                    if (scrollY > 300) {
+                        btn.classList.add('scroll-top-btn--visible');
+                    } else {
+                        btn.classList.remove('scroll-top-btn--visible');
+                    }
+                }, { passive: true });
+            })();
+
+            function scrollToTop() {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function toggleSearchPanel() {
+                const panel = document.getElementById('searchPanel');
+                const btn = document.getElementById('searchToggleBtn');
+                const isOpen = panel.classList.toggle('search-panel--open');
+                btn.classList.toggle('topbar__btn--active', isOpen);
+                if (isOpen) {
+                    setTimeout(function() {
+                        document.getElementById('searchKeywordInput').focus();
+                    }, 280);
+                }
+            }
+
+            // 검색 중이면 패널 자동 오픈
+            (function() {
+                const keyword = /*[[${keyword}]]*/ null;
+                if (keyword) {
+                    const panel = document.getElementById('searchPanel');
+                    const btn = document.getElementById('searchToggleBtn');
+                    panel.classList.add('search-panel--open');
+                    btn.classList.add('topbar__btn--active');
+                }
+            })();
+
             function toggleCategoryMenu() {
                 const menu = document.getElementById('categoryMenu');
                 const overlay = document.getElementById('categoryMenuOverlay');
@@ -152,6 +272,8 @@
 
                 let currentPage = /*[[${boards.number}]]*/ 0;
                 const totalPages = /*[[${boards.totalPages}]]*/ 1;
+                const searchType = /*[[${searchType}]]*/ 'all';
+                const keyword = /*[[${keyword}]]*/ null;
                 let isLoading = false;
 
                 // 모바일 여부 확인
@@ -165,7 +287,7 @@
                     if (isLoading) return;
                     if (currentPage >= totalPages - 1) return;
 
-                    const scrollPosition = window.innerHeight + window.scrollY;
+                    const scrollPosition = window.innerHeight + (window.scrollY || window.pageYOffset || 0);
                     const threshold = document.documentElement.scrollHeight - 200;
 
                     if (scrollPosition >= threshold) {
@@ -179,7 +301,11 @@
                     const loadingIndicator = document.querySelector('.loading-indicator');
                     if (loadingIndicator) loadingIndicator.style.display = 'block';
 
-                    fetch('/board/api/boards?categoryId=' + categoryId + '&page=' + (currentPage + 1))
+                    let apiUrl = '/board/api/boards?categoryId=' + categoryId + '&page=' + (currentPage + 1);
+                    if (keyword) {
+                        apiUrl += '&searchType=' + encodeURIComponent(searchType) + '&keyword=' + encodeURIComponent(keyword);
+                    }
+                    fetch(apiUrl)
                         .then(response => response.json())
                         .then(data => {
                             if (data.content && data.content.length > 0) {
@@ -198,19 +324,24 @@
                         });
                 }
 
+                // 날짜 포매팅 (yyyy-MM-dd HH:mm)
+                function formatDate(dateStr) {
+                    const d = new Date(dateStr);
+                    const yyyy = d.getFullYear();
+                    const MM = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    const HH = String(d.getHours()).padStart(2, '0');
+                    const mm = String(d.getMinutes()).padStart(2, '0');
+                    return `${yyyy}-${MM}-${dd} ${HH}:${mm}`;
+                }
+
                 // 게시글 아이템 생성
                 function createBoardItem(board) {
                     const article = document.createElement('article');
                     article.className = 'board-item';
                     article.onclick = function() { location.href = '/board/' + board.id; };
 
-                    const createdAt = new Date(board.createdAt).toLocaleString('ko-KR', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
+                    const createdAt = formatDate(board.createdAt);
 
                     article.innerHTML = `
                         <div class="board-item__header">

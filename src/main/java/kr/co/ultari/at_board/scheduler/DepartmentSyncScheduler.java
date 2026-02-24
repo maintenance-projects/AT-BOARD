@@ -1,7 +1,7 @@
 package kr.co.ultari.at_board.scheduler;
 
 import kr.co.ultari.at_board.model.primary.BoardCategory;
-import kr.co.ultari.at_board.model.secondary.Department;
+import kr.co.ultari.at_board.model.secondary.Dept;
 import kr.co.ultari.at_board.repository.secondary.DepartmentRepository;
 import kr.co.ultari.at_board.service.BoardCategoryService;
 import lombok.RequiredArgsConstructor;
@@ -35,22 +35,33 @@ public class DepartmentSyncScheduler {
 
         try {
             // secondary DB에서 모든 부서 조회
-            List<Department> departments = departmentRepository.findAll();
+            List<Dept> departments = departmentRepository.findAll();
             log.info("부서 테이블에서 {} 개의 부서 조회", departments.size());
 
             int createdCount = 0;
             int skippedCount = 0;
 
-            for (Department dept : departments) {
+            for (Dept dept : departments) {
+                // parentDept가 "0"인 최상위 부서(회사)는 게시판 생성 제외
+                if ("0".equals(dept.getParentDept())) {
+                    log.debug("최상위 부서 스킵: {} ({})", dept.getDeptName(), dept.getDeptId());
+                    skippedCount++;
+                    continue;
+                }
+
                 // 해당 부서의 게시판이 이미 존재하는지 확인
-                BoardCategory existingCategory = boardCategoryService.getCategoryByDeptId(dept.getDeptId());
+                BoardCategory existingCategory = boardCategoryService.getCategoryByDeptIdAny(dept.getDeptId());
 
                 if (existingCategory == null) {
                     // 게시판이 없으면 새로 생성
+                    java.util.Set<String> newDeptIds = new java.util.HashSet<>();
+                    newDeptIds.add(dept.getDeptId());
                     BoardCategory newCategory = BoardCategory.builder()
                             .name(dept.getDeptName() + " 게시판")
                             .description(dept.getDeptName() + " 전용 게시판입니다.")
                             .deptId(dept.getDeptId())
+                            .deptName(dept.getDeptName())
+                            .deptIds(newDeptIds)
                             .isActive(true)
                             .adminOnly(false)
                             .build();

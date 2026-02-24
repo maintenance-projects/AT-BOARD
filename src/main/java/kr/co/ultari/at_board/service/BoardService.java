@@ -23,24 +23,16 @@ public class BoardService {
 
     private final BoardRepository boardRepository;
     private final BoardCategoryService boardCategoryService;
+    private final DepartmentService departmentService;
 
     public List<Board> getAllBoards() {
         return boardRepository.findAllByOrderByCreatedAtDesc();
     }
 
     public List<Board> getBoardsByUser(User user) {
-        // 사용자의 부서 게시판 + 전사 공용 게시판 조회
         List<BoardCategory> categories = new ArrayList<>();
-
-        // 부서 게시판
-        BoardCategory deptCategory = boardCategoryService.getCategoryByDeptId(user.getDeptId());
-        if (deptCategory != null) {
-            categories.add(deptCategory);
-        }
-
-        // 전사 공용 게시판
         categories.addAll(boardCategoryService.getCompanyWideCategories());
-
+        categories.addAll(boardCategoryService.getDeptCategoriesForUser(user.getDeptId()));
         return boardRepository.findByCategoryInOrderByCreatedAtDesc(categories);
     }
 
@@ -60,25 +52,64 @@ public class BoardService {
         return boardRepository.findByCategoryOrderByCreatedAtDesc(category, pageable);
     }
 
+    public Page<Board> searchBoards(Long categoryId, String searchType, String keyword, Pageable pageable) {
+        BoardCategory category = boardCategoryService.getCategoryById(categoryId);
+        if (category == null) {
+            return Page.empty(pageable);
+        }
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return boardRepository.findByCategoryOrderByCreatedAtDesc(category, pageable);
+        }
+        if ("title".equals(searchType)) {
+            return boardRepository.findByCategoryAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(category, keyword, pageable);
+        } else if ("content".equals(searchType)) {
+            return boardRepository.findByCategoryAndContentContainingIgnoreCaseOrderByCreatedAtDesc(category, keyword, pageable);
+        } else if ("author".equals(searchType)) {
+            return boardRepository.findByCategoryAndAuthorNameContainingIgnoreCaseOrderByCreatedAtDesc(category, keyword, pageable);
+        } else {
+            return boardRepository.searchByCategoryAndTitleOrContent(category, keyword, pageable);
+        }
+    }
+
     @Transactional("primaryTransactionManager")
     public Board getBoardById(Long id) {
         Board board = boardRepository.findById(id).orElse(null);
         if (board != null) {
+            // 원자적 업데이트로 동시 접근 시 Race condition 방지
+            boardRepository.incrementViewCount(id);
             board.setViewCount(board.getViewCount() + 1);
-            boardRepository.save(board);
         }
         return board;
     }
 
+    public Board getBoardByIdNoCount(Long id) {
+        return boardRepository.findById(id).orElse(null);
+    }
+
+    @Transactional("primaryTransactionManager")
     public Board getBoardByIdForUser(Long id, User user) {
         Board board = getBoardById(id);
         if (board != null) {
-            // 권한 체크: 부서 게시판이면 같은 부서만 조회 가능
+            // 권한 체크: 부서 게시판이면 해당 부서 또는 하위 부서 사용자만 조회 가능
             BoardCategory category = board.getCategory();
-            if (category.getDeptId() != null &&
-                    !category.getDeptId().equals(user.getDeptId())) {
-                log.warn("Access denied: User {} tried to access board {} from different department",
-                        user.getUserId(), id);
+            if (category != null && !category.getDeptIds().isEmpty() &&
+                    !departmentService.isInAnyDeptOrSubDept(user.getDeptId(), category.getDeptIds())) {
+                log.warn("Access denied: User {} tried to access board {} (depts={})",
+                        user.getUserId(), id, category.getDeptIds());
+                return null;
+            }
+        }
+        return board;
+    }
+
+    // 조회수 증가 없이 권한 체크만 수행 (세션 내 중복 조회 시 사용)
+    @Transactional("primaryTransactionManager")
+    public Board getBoardByIdForUserNoCount(Long id, User user) {
+        Board board = getBoardByIdNoCount(id);
+        if (board != null) {
+            BoardCategory category = board.getCategory();
+            if (category != null && !category.getDeptIds().isEmpty() &&
+                    !departmentService.isInAnyDeptOrSubDept(user.getDeptId(), category.getDeptIds())) {
                 return null;
             }
         }
@@ -87,11 +118,11 @@ public class BoardService {
 
     @Transactional("primaryTransactionManager")
     public Board createBoard(String title, String content, User author, BoardCategory category) {
-        // 권한 체크: 부서 게시판이면 같은 부서만 글 작성 가능
-        if (category.getDeptId() != null &&
-                !category.getDeptId().equals(author.getDeptId())) {
-            log.warn("Access denied: User {} tried to write to category {} from different department",
-                    author.getUserId(), category.getId());
+        // 권한 체크: 부서 게시판이면 해당 부서 또는 하위 부서 사용자만 글 작성 가능
+        if (!category.getDeptIds().isEmpty() &&
+                !departmentService.isInAnyDeptOrSubDept(author.getDeptId(), category.getDeptIds())) {
+            log.warn("Access denied: User {} tried to write to category {} (depts={})",
+                    author.getUserId(), category.getId(), category.getDeptIds());
             throw new IllegalArgumentException("해당 게시판에 글을 작성할 권한이 없습니다.");
         }
 
@@ -101,6 +132,9 @@ public class BoardService {
                 .userId(author.getUserId())
                 .authorName(author.getUserName())
                 .authorPosName(author.getPosName())
+                .authorDeptName(author.getDeptName() != null
+                        ? author.getDeptName()
+                        : departmentService.getDeptName(author.getDeptId()))
                 .category(category)
                 .viewCount(0)
                 .build();
@@ -141,6 +175,27 @@ public class BoardService {
             return true;
         }
         return false;
+    }
+
+    // 어드민: 전체/카테고리별 페이징+검색
+    public Page<Board> adminSearchBoards(Long categoryId, String searchType, String keyword, Pageable pageable) {
+        boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
+
+        if (categoryId != null) {
+            return searchBoards(categoryId, searchType, keyword, pageable);
+        }
+        if (!hasKeyword) {
+            return boardRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+        if ("title".equals(searchType)) {
+            return boardRepository.findByTitleContainingIgnoreCaseOrderByCreatedAtDesc(keyword, pageable);
+        } else if ("content".equals(searchType)) {
+            return boardRepository.findByContentContainingIgnoreCaseOrderByCreatedAtDesc(keyword, pageable);
+        } else if ("author".equals(searchType)) {
+            return boardRepository.findByAuthorNameContainingIgnoreCaseOrderByCreatedAtDesc(keyword, pageable);
+        } else {
+            return boardRepository.searchAllByTitleOrContent(keyword, pageable);
+        }
     }
 
     // 관리자용 메서드

@@ -11,9 +11,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
 import javax.servlet.http.HttpSession;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin/boards")
@@ -24,8 +26,13 @@ public class AdminBoardController {
     private final BoardService boardService;
     private final BoardCategoryService boardCategoryService;
 
+    private static final int PAGE_SIZE = 20;
+
     @GetMapping
     public String list(@RequestParam(required = false) Long categoryId,
+                       @RequestParam(defaultValue = "0") int page,
+                       @RequestParam(required = false, defaultValue = "all") String searchType,
+                       @RequestParam(required = false) String keyword,
                        Model model,
                        HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
@@ -33,20 +40,8 @@ public class AdminBoardController {
             return "redirect:/admin/login";
         }
 
-        List<Board> boards;
-        if (categoryId != null) {
-            BoardCategory category = boardCategoryService.getCategoryById(categoryId);
-            if (category != null) {
-                boards = boardService.getAllBoards().stream()
-                        .filter(b -> b.getCategory().getId().equals(categoryId))
-                        .collect(Collectors.toList());
-                model.addAttribute("selectedCategory", category);
-            } else {
-                boards = boardService.getAllBoards();
-            }
-        } else {
-            boards = boardService.getAllBoards();
-        }
+        PageRequest pageable = PageRequest.of(page, PAGE_SIZE);
+        Page<Board> boards = boardService.adminSearchBoards(categoryId, searchType, keyword, pageable);
 
         List<BoardCategory> categories = boardCategoryService.getAllCategories();
 
@@ -54,6 +49,8 @@ public class AdminBoardController {
         model.addAttribute("boards", boards);
         model.addAttribute("categories", categories);
         model.addAttribute("categoryId", categoryId);
+        model.addAttribute("searchType", searchType);
+        model.addAttribute("keyword", keyword);
 
         return "pages/admin/board/list";
     }
@@ -65,7 +62,7 @@ public class AdminBoardController {
             return "redirect:/admin/login";
         }
 
-        Board board = boardService.getBoardById(id);
+        Board board = boardService.getBoardByIdNoCount(id);
         if (board == null) {
             return "redirect:/admin/boards";
         }
@@ -134,7 +131,7 @@ public class AdminBoardController {
             return "redirect:/admin/login";
         }
 
-        Board board = boardService.getBoardById(id);
+        Board board = boardService.getBoardByIdNoCount(id);
         if (board != null) {
             boardService.deleteBoardByAdmin(id);
             log.info("Admin {} deleted board: {}", admin.getAdminId(), board.getTitle());

@@ -10,7 +10,12 @@ import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "comments")
+@Table(name = "comments", indexes = {
+        // 게시글별 댓글 최신순 (BOARD_ID는 FK로 인덱스 있으나 복합으로 추가)
+        @Index(name = "idx_comment_board_created", columnList = "BOARD_ID, CREATED_AT"),
+        // 사용자별 댓글 조회
+        @Index(name = "idx_comment_user_id", columnList = "USER_ID")
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -34,6 +39,9 @@ public class Comment {
     @Column(name = "AUTHOR_POS_NAME", length = 100)
     private String authorPosName;
 
+    @Column(name = "AUTHOR_DEPT_NAME", length = 100)
+    private String authorDeptName;
+
     @Column(name = "CONTENT", nullable = false, length = 1000)
     private String content;
 
@@ -41,11 +49,16 @@ public class Comment {
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // 이름 + 직책명 조합
+    // 부서명 + 이름 + 직책명 조합
     public String getAuthorDisplayName() {
-        if (authorPosName != null && !authorPosName.isEmpty()) {
-            return authorName + " " + authorPosName;
+        StringBuilder sb = new StringBuilder();
+        if (authorDeptName != null && !authorDeptName.isEmpty()) {
+            sb.append(authorDeptName).append(" ");
         }
-        return authorName;
+        sb.append(authorName);
+        if (authorPosName != null && !authorPosName.isEmpty()) {
+            sb.append(" ").append(authorPosName);
+        }
+        return sb.toString();
     }
 }

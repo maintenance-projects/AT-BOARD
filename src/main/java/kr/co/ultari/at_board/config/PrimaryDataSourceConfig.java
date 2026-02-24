@@ -52,6 +52,13 @@ public class PrimaryDataSourceConfig {
         properties.put("hibernate.dialect", config.getDialect());
         properties.put("hibernate.show_sql", String.valueOf(config.isShowSql()));
         properties.put("hibernate.format_sql", String.valueOf(config.isFormatSql()));
+        // N+1 완화: @ElementCollection / @OneToMany 배치 로딩 (100개씩 IN 쿼리로 묶음)
+        properties.put("hibernate.default_batch_fetch_size", "100");
+        // INSERT/UPDATE JDBC 배치 처리
+        properties.put("hibernate.jdbc.batch_size", "50");
+        properties.put("hibernate.order_inserts", "true");
+        properties.put("hibernate.order_updates", "true");
+        properties.put("hibernate.jdbc.batch_versioned_data", "true");
 
         return builder
                 .dataSource(dataSource)
