@@ -103,7 +103,6 @@
                                   th:text="${currentUser.posName}">팀장</span>
                         </div>
                     </div>
-                    <h2 class="board-sidebar__title">게시판</h2>
                     <nav>
                         <a th:each="category : ${categories}"
                            th:href="@{/board(categoryId=${category.id})}"
@@ -258,6 +257,25 @@
                     const btn = document.getElementById('searchToggleBtn');
                     panel.classList.add('search-panel--open');
                     btn.classList.add('topbar__btn--active');
+                }
+            })();
+
+            // PC 사이드바 top을 헤더 높이에 맞게 동적 조정
+            (function() {
+                var header = document.querySelector('.app-header');
+                var sidebar = document.querySelector('.board-sidebar');
+                if (!header || !sidebar) return;
+
+                var gap = 16; // 헤더 하단 여백
+
+                function updateSidebarTop() {
+                    sidebar.style.top = (header.offsetHeight + gap) + 'px';
+                }
+
+                updateSidebarTop();
+
+                if (window.ResizeObserver) {
+                    new ResizeObserver(updateSidebarTop).observe(header);
                 }
             })();
 

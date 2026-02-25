@@ -1227,6 +1227,7 @@
         position: sticky;
         top: 86px;
         overflow: hidden;
+        transition: top 0.28s ease;
     }
 
     .board-sidebar__user {
@@ -1237,16 +1238,6 @@
         border-bottom: 1px solid var(--line);
     }
 
-    .board-sidebar__title {
-        margin: 0;
-        padding: 14px 16px 12px;
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        border-bottom: 1px solid var(--line);
-    }
 
     .board-sidebar__item {
         display: block;
@@ -1325,7 +1316,21 @@
 
 /* 탑바 검색 버튼 활성 상태 */
 .topbar--board {
-    grid-template-columns: 48px 1fr auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+}
+
+.topbar--board .topbar__title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 200px);
+    pointer-events: none;
 }
 
 .topbar__actions {
