@@ -56,7 +56,11 @@ public class AdminBoardController {
     }
 
     @GetMapping("/{id}")
-    public String detail(@PathVariable Long id, Model model, HttpSession session) {
+    public String detail(@PathVariable Long id,
+                         @RequestParam(required = false) Long categoryId,
+                         @RequestParam(required = false) String searchType,
+                         @RequestParam(required = false) String keyword,
+                         Model model, HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
         if (admin == null) {
             return "redirect:/admin/login";
@@ -69,6 +73,9 @@ public class AdminBoardController {
 
         model.addAttribute("admin", admin);
         model.addAttribute("board", board);
+        model.addAttribute("backCategoryId", categoryId);
+        model.addAttribute("backSearchType", searchType);
+        model.addAttribute("backKeyword", keyword);
 
         return "pages/admin/board/detail";
     }

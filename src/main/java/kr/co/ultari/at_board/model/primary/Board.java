@@ -90,6 +90,18 @@ public class Board {
         return authorName;
     }
 
+    // 생성 시각 (epoch ms, JS용)
+    public long getCreatedAtEpochMilli() {
+        if (createdAt == null) return 0;
+        return createdAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
+    // 이미지 포함 여부
+    public boolean isHasImage() {
+        if (content == null) return false;
+        return content.contains("<img");
+    }
+
     // HTML 태그 제거한 순수 텍스트 (미리보기용)
     public String getPlainContent() {
         if (content == null) return "";

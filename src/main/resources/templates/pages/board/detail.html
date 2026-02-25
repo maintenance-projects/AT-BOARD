@@ -11,7 +11,7 @@
 <body>
     <th:block th:fragment="pageHeader">
         <div class="topbar topbar--center">
-            <a th:href="@{/board(categoryId=${board.category != null ? board.category.id : ''})}"
+            <a th:href="@{/board(categoryId=${backCategoryId}, searchType=${backKeyword != null ? backSearchType : null}, keyword=${backKeyword})}"
                class="topbar__btn" aria-label="목록으로">
                 <span class="ico ico--back" aria-hidden="true"></span>
             </a>
@@ -90,11 +90,85 @@
                                 <span class="comment-item__author" th:text="${comment.authorDisplayName}">작성자</span>
                                 <time class="comment-item__date" th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
                             </div>
-                            <p class="comment-item__content" th:text="${comment.content}">댓글 내용</p>
-                            <div th:if="${currentUser != null && comment.userId == currentUser.userId}" class="comment-item__actions">
-                                <form th:action="@{/board/comments/{commentId}/delete(commentId=${comment.id})}" method="post" style="display: inline;" onsubmit="return confirm('댓글을 삭제하시겠습니까?');">
+                            <p th:id="'comment-text-' + ${comment.id}" class="comment-item__content" th:text="${comment.content}">댓글 내용</p>
+                            <!-- 인라인 수정 폼 (기본 숨김) -->
+                            <div th:if="${currentUser != null && comment.userId == currentUser.userId}"
+                                 th:id="'comment-edit-' + ${comment.id}" class="comment-edit" style="display:none;">
+                                <form th:action="@{/board/comments/{id}/edit(id=${comment.id})}" method="post">
                                     <input type="hidden" name="boardId" th:value="${board.id}" />
-                                    <button type="submit" class="comment-item__delete">삭제</button>
+                                    <textarea name="content" class="comment-form__input comment-edit__textarea"
+                                              rows="3" maxlength="1000" th:text="${comment.content}"></textarea>
+                                    <div class="comment-edit__actions">
+                                        <button type="button" class="comment-item__cancel-btn"
+                                                th:onclick="'cancelEdit(' + ${comment.id} + ')'">취소</button>
+                                        <button type="submit" class="comment-form__submit">저장</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="comment-item__footer">
+                                <button type="button" class="comment-item__reply-btn"
+                                        th:data-reply-target="${comment.id}"
+                                        th:onclick="'toggleReply(' + ${comment.id} + ')'">
+                                    <th:block th:if="${!comment.replies.isEmpty()}">답글 <span th:text="${comment.replies.size()}">0</span></th:block>
+                                    <th:block th:if="${comment.replies.isEmpty()}">답글</th:block>
+                                </button>
+                                <th:block th:if="${currentUser != null && comment.userId == currentUser.userId}">
+                                    <button type="button" class="comment-item__edit-btn"
+                                            th:onclick="'startEdit(' + ${comment.id} + ')'">수정</button>
+                                    <form th:action="@{/board/comments/{commentId}/delete(commentId=${comment.id})}" method="post"
+                                          style="display: inline;" onsubmit="return confirm('댓글을 삭제하시겠습니까?');">
+                                        <input type="hidden" name="boardId" th:value="${board.id}" />
+                                        <button type="submit" class="comment-item__delete">삭제</button>
+                                    </form>
+                                </th:block>
+                            </div>
+
+                            <!-- 답댓글 아코디언 영역 -->
+                            <div th:id="'reply-area-' + ${comment.id}" class="reply-area">
+                                <!-- 답댓글 목록 -->
+                                <div th:if="${!comment.replies.isEmpty()}" class="reply-list">
+                                    <div th:each="reply : ${comment.replies}" class="comment-item comment-item--reply">
+                                        <div class="comment-item__header">
+                                            <span class="comment-item__author" th:text="${reply.authorDisplayName}">작성자</span>
+                                            <time class="comment-item__date" th:text="${#temporals.format(reply.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
+                                        </div>
+                                        <p th:id="'comment-text-' + ${reply.id}" class="comment-item__content" th:text="${reply.content}">답댓글 내용</p>
+                                        <!-- 인라인 수정 폼 (기본 숨김) -->
+                                        <div th:if="${currentUser != null && reply.userId == currentUser.userId}"
+                                             th:id="'comment-edit-' + ${reply.id}" class="comment-edit" style="display:none;">
+                                            <form th:action="@{/board/comments/{id}/edit(id=${reply.id})}" method="post">
+                                                <input type="hidden" name="boardId" th:value="${board.id}" />
+                                                <textarea name="content" class="comment-form__input comment-edit__textarea"
+                                                          rows="2" maxlength="1000" th:text="${reply.content}"></textarea>
+                                                <div class="comment-edit__actions">
+                                                    <button type="button" class="comment-item__cancel-btn"
+                                                            th:onclick="'cancelEdit(' + ${reply.id} + ')'">취소</button>
+                                                    <button type="submit" class="comment-form__submit">저장</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div th:if="${currentUser != null && reply.userId == currentUser.userId}" class="comment-item__footer">
+                                            <button type="button" class="comment-item__edit-btn"
+                                                    th:onclick="'startEdit(' + ${reply.id} + ')'">수정</button>
+                                            <form th:action="@{/board/comments/{commentId}/delete(commentId=${reply.id})}" method="post"
+                                                  style="display: inline;" onsubmit="return confirm('답글을 삭제하시겠습니까?');">
+                                                <input type="hidden" name="boardId" th:value="${board.id}" />
+                                                <button type="submit" class="comment-item__delete">삭제</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 답댓글 작성 폼 -->
+                                <form th:action="@{/board/{id}/comments(id=${board.id})}" method="post" class="comment-form comment-form--reply">
+                                    <input type="hidden" name="parentId" th:value="${comment.id}" />
+                                    <textarea
+                                        name="content"
+                                        class="comment-form__input"
+                                        placeholder="답글을 입력하세요"
+                                        required
+                                        maxlength="1000"
+                                        rows="2"></textarea>
+                                    <button type="submit" class="comment-form__submit">등록</button>
                                 </form>
                             </div>
                         </div>
@@ -102,7 +176,7 @@
                 </div>
 
                 <div class="board-detail__actions">
-                    <a th:href="@{/board(categoryId=${board.category.id})}" class="btn btn--secondary">목록으로</a>
+                    <a th:href="@{/board(categoryId=${backCategoryId}, searchType=${backKeyword != null ? backSearchType : null}, keyword=${backKeyword})}" class="btn btn--secondary">목록으로</a>
                 </div>
             </article>
         </main>
@@ -110,10 +184,32 @@
         <form th:action="@{/board/delete/{id}(id=${board.id})}" method="post" id="deleteForm" style="display: none;">
             <input type="hidden" name="categoryId" th:value="${board.category.id}" />
         </form>
+
+        <!-- 이미지 뷰어 -->
+        <div id="imageViewer" class="img-viewer" style="display:none;" role="dialog" aria-modal="true">
+            <button class="img-viewer__close" type="button" aria-label="닫기">&times;</button>
+            <span class="img-viewer__counter" id="viewerCounter"></span>
+            <button class="img-viewer__prev" type="button" aria-label="이전 이미지">&#10094;</button>
+            <div class="img-viewer__main">
+                <img id="viewerMainImg" class="img-viewer__main-img" src="" alt="이미지">
+            </div>
+            <button class="img-viewer__next" type="button" aria-label="다음 이미지">&#10095;</button>
+            <div class="img-viewer__thumbs" id="viewerThumbs"></div>
+        </div>
     </th:block>
 
     <th:block th:fragment="pageScripts">
         <script th:inline="javascript">
+            // 읽음 처리 (N 배지 소멸)
+            (function() {
+                var boardId = String(/*[[${board.id}]]*/0);
+                try {
+                    var readSet = JSON.parse(localStorage.getItem('atboard_read') || '{}');
+                    readSet[boardId] = Date.now();
+                    localStorage.setItem('atboard_read', JSON.stringify(readSet));
+                } catch(e) {}
+            })();
+
             // 최상단 이동 플로팅 버튼
             (function() {
                 const btn = document.getElementById('scrollTopBtn');
@@ -149,6 +245,150 @@
                     menu.style.display = 'none';
                 }
             });
+
+            // 이미지 뷰어
+            (function() {
+                var viewer = document.getElementById('imageViewer');
+                var mainImg = document.getElementById('viewerMainImg');
+                var thumbsEl = document.getElementById('viewerThumbs');
+                var counterEl = document.getElementById('viewerCounter');
+                var prevBtn = viewer.querySelector('.img-viewer__prev');
+                var nextBtn = viewer.querySelector('.img-viewer__next');
+
+                var srcs = [];
+                var current = 0;
+
+                // 콘텐츠 내 이미지 수집
+                var contentImgs = Array.from(document.querySelectorAll('.board-detail__content img'));
+                if (contentImgs.length === 0) return;
+
+                contentImgs.forEach(function(img, i) {
+                    srcs.push(img.src);
+                    img.style.cursor = 'zoom-in';
+                    img.addEventListener('click', function() { openViewer(i); });
+                });
+
+                // 썸네일 생성
+                if (srcs.length > 1) {
+                    srcs.forEach(function(src, i) {
+                        var t = document.createElement('img');
+                        t.src = src;
+                        t.className = 'img-viewer__thumb';
+                        t.alt = (i + 1) + '번 이미지';
+                        t.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            current = i;
+                            updateViewer();
+                        });
+                        thumbsEl.appendChild(t);
+                    });
+                } else {
+                    thumbsEl.style.display = 'none';
+                    prevBtn.style.display = 'none';
+                    nextBtn.style.display = 'none';
+                }
+
+                function openViewer(index) {
+                    current = index;
+                    viewer.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                    updateViewer();
+                }
+
+                function closeViewer() {
+                    viewer.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+
+                function prevImage() {
+                    current = (current - 1 + srcs.length) % srcs.length;
+                    updateViewer();
+                }
+
+                function nextImage() {
+                    current = (current + 1) % srcs.length;
+                    updateViewer();
+                }
+
+                function updateViewer() {
+                    mainImg.src = srcs[current];
+                    counterEl.textContent = srcs.length > 1 ? (current + 1) + ' / ' + srcs.length : '';
+                    var thumbs = thumbsEl.querySelectorAll('.img-viewer__thumb');
+                    thumbs.forEach(function(t, i) {
+                        t.classList.toggle('img-viewer__thumb--active', i === current);
+                    });
+                    if (thumbs[current]) {
+                        thumbs[current].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+                    }
+                }
+
+                // 버튼 이벤트
+                viewer.querySelector('.img-viewer__close').addEventListener('click', closeViewer);
+                prevBtn.addEventListener('click', function(e) { e.stopPropagation(); prevImage(); });
+                nextBtn.addEventListener('click', function(e) { e.stopPropagation(); nextImage(); });
+
+                // 배경 클릭으로 닫기
+                viewer.addEventListener('click', function(e) {
+                    if (e.target === viewer || e.target === viewer.querySelector('.img-viewer__main')) {
+                        closeViewer();
+                    }
+                });
+
+                // 키보드 내비게이션
+                document.addEventListener('keydown', function(e) {
+                    if (viewer.style.display === 'none') return;
+                    if (e.key === 'ArrowLeft') prevImage();
+                    else if (e.key === 'ArrowRight') nextImage();
+                    else if (e.key === 'Escape') closeViewer();
+                });
+
+                // 터치 스와이프
+                var touchStartX = 0;
+                viewer.querySelector('.img-viewer__main').addEventListener('touchstart', function(e) {
+                    touchStartX = e.touches[0].clientX;
+                }, { passive: true });
+                viewer.querySelector('.img-viewer__main').addEventListener('touchend', function(e) {
+                    var dx = e.changedTouches[0].clientX - touchStartX;
+                    if (Math.abs(dx) > 50) {
+                        if (dx < 0) nextImage(); else prevImage();
+                    }
+                }, { passive: true });
+            })();
+
+            // 댓글 인라인 수정
+            function startEdit(commentId) {
+                var textEl  = document.getElementById('comment-text-' + commentId);
+                var editEl  = document.getElementById('comment-edit-' + commentId);
+                if (textEl)  textEl.style.display  = 'none';
+                if (editEl) {
+                    editEl.style.display = 'block';
+                    var ta = editEl.querySelector('textarea');
+                    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+                }
+            }
+
+            function cancelEdit(commentId) {
+                var textEl = document.getElementById('comment-text-' + commentId);
+                var editEl = document.getElementById('comment-edit-' + commentId);
+                if (textEl) textEl.style.display = '';
+                if (editEl) editEl.style.display  = 'none';
+            }
+
+            // 답댓글 아코디언 토글
+            function toggleReply(commentId) {
+                var area = document.getElementById('reply-area-' + commentId);
+                if (!area) return;
+                var isOpen = area.classList.toggle('reply-area--open');
+                var footer = area.previousElementSibling;
+                if (footer) {
+                    var btn = footer.querySelector('.comment-item__reply-btn');
+                    if (btn) btn.classList.toggle('comment-item__reply-btn--active', isOpen);
+                }
+                if (isOpen) {
+                    var textarea = area.querySelector('textarea');
+                    if (textarea) setTimeout(function() { textarea.focus(); }, 300);
+                }
+            }
 
             // 좋아요 토글
             function toggleLike() {

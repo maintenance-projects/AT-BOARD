@@ -62,6 +62,10 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     // 검색: 작성자
     Page<Board> findByCategoryAndAuthorNameContainingIgnoreCaseOrderByCreatedAtDesc(BoardCategory category, String keyword, Pageable pageable);
 
+    // 신규 게시글 ID + 카테고리 ID (N 배지용)
+    @Query("SELECT b.id, b.category.id FROM Board b WHERE b.createdAt > :since")
+    List<Object[]> findNewPostIdAndCategoryIdSince(@Param("since") LocalDateTime since);
+
     // 어드민: 전체 게시글 페이징
     @EntityGraph(attributePaths = {"category"})
     Page<Board> findAllByOrderByCreatedAtDesc(Pageable pageable);

@@ -92,7 +92,7 @@
                             <tr th:each="board : ${boards.content}">
                                 <td th:text="${board.id}">1</td>
                                 <td>
-                                    <a th:href="@{/admin/boards/{id}(id=${board.id})}" th:text="${board.title}" class="link">제목</a>
+                                    <a th:href="@{/admin/boards/{id}(id=${board.id}, categoryId=${categoryId}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}" th:text="${board.title}" class="link">제목</a>
                                 </td>
                                 <td th:text="${board.authorName}">작성자</td>
                                 <td><span class="badge badge--secondary" th:text="${board.category != null ? board.category.name : '-'}">게시판</span></td>

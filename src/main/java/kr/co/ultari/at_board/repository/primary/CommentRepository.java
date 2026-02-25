@@ -15,11 +15,24 @@ import java.util.List;
 public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findByBoardOrderByCreatedAtAsc(Board board);
 
+    // 루트 댓글만 (parentId IS NULL)
+    List<Comment> findByBoardAndParentIdIsNullOrderByCreatedAtAsc(Board board);
+
+    // 특정 댓글의 답댓글
+    List<Comment> findByParentIdOrderByCreatedAtAsc(Long parentId);
+
+    // 게시글의 모든 답댓글 (parentId IS NOT NULL) - 삭제 시 사용
+    List<Comment> findByBoardAndParentIdIsNotNull(Board board);
+
     void deleteByBoard(Board board);
 
     long countByBoard(Board board);
 
     List<Comment> findByUserId(String userId);
+
+    // 현재 페이지 게시글 중 사용자가 댓글 단 boardId 목록
+    @Query("SELECT DISTINCT c.board.id FROM Comment c WHERE c.userId = :userId AND c.board.id IN :boardIds")
+    List<Long> findCommentedBoardIds(@Param("userId") String userId, @Param("boardIds") List<Long> boardIds);
 
     // 카테고리 내 전체 댓글 벌크 삭제
     @Modifying(clearAutomatically = true)

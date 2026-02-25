@@ -11,7 +11,7 @@ sourceCompatibility = '1.8'
 
 bootJar {
     enabled = true
-    archiveBaseName = 'chatbot'
+    archiveBaseName = 'at-board'
     archiveVersion = '1.0.0.RELEASE'
 }
 

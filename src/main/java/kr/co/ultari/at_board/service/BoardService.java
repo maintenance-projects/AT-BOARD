@@ -14,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -220,5 +222,22 @@ public class BoardService {
     public long getTodayBoardCount() {
         LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
         return boardRepository.countByCreatedAtAfter(startOfDay);
+    }
+
+    // 카테고리별 신규 게시글 ID 맵 (N 배지용, 최근 24시간)
+    @Transactional(value = "primaryTransactionManager", readOnly = true)
+    public Map<String, List<Long>> getNewPostsByCategoryMap(LocalDateTime since) {
+        List<Object[]> rows = boardRepository.findNewPostIdAndCategoryIdSince(since);
+        Map<String, List<Long>> result = new HashMap<>();
+        for (Object[] row : rows) {
+            Long postId = (Long) row[0];
+            Long catId = (Long) row[1];
+            String key = String.valueOf(catId);
+            if (!result.containsKey(key)) {
+                result.put(key, new ArrayList<>());
+            }
+            result.get(key).add(postId);
+        }
+        return result;
     }
 }

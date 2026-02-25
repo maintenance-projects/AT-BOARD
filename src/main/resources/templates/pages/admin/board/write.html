@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>게시물 작성 - AT-Board Admin</title>
     <link rel="stylesheet" href="/pages/admin/admin.css" />
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 </head>
 <body>
     <div class="admin-layout">
@@ -62,8 +63,9 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="content" class="form-label">내용 <span class="required">*</span></label>
-                            <textarea id="content" name="content" class="form-textarea" placeholder="내용을 입력하세요" required rows="15"></textarea>
+                            <label class="form-label">내용 <span class="required">*</span></label>
+                            <div id="editor" class="admin-quill-editor"></div>
+                            <textarea id="content" name="content" style="display: none;"></textarea>
                         </div>
 
                         <div class="form-actions">
@@ -77,5 +79,160 @@
     </div>
 
     <script src="/pages/admin/admin.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+    <script>
+        function initImageResize(quill) {
+            var container = quill.root.parentElement;
+            var editorEl  = quill.root;
+            var overlay = null, activeImg = null, startX, startW;
+
+            function showOverlay(img) {
+                removeOverlay();
+                activeImg = img;
+                overlay = document.createElement('div');
+                overlay.style.cssText = 'position:absolute;box-sizing:border-box;border:2px solid #3498db;pointer-events:none;z-index:100;';
+                var handle = document.createElement('div');
+                handle.title = '드래그하여 크기 조절';
+                handle.style.cssText = 'position:absolute;right:-10px;bottom:-10px;width:20px;height:20px;background:#3498db;cursor:se-resize;pointer-events:all;border-radius:3px;touch-action:none;';
+                overlay.appendChild(handle);
+                container.appendChild(overlay);
+                updateOverlay();
+                handle.addEventListener('mousedown', onMouseDown);
+                handle.addEventListener('touchstart', onTouchStart, { passive: false });
+            }
+
+            function updateOverlay() {
+                if (!activeImg || !overlay) return;
+                var cRect = container.getBoundingClientRect();
+                var iRect = activeImg.getBoundingClientRect();
+                overlay.style.left   = (iRect.left - cRect.left) + 'px';
+                overlay.style.top    = (iRect.top  - cRect.top)  + 'px';
+                overlay.style.width  = iRect.width  + 'px';
+                overlay.style.height = iRect.height + 'px';
+            }
+
+            function removeOverlay() {
+                if (overlay) { overlay.remove(); overlay = null; }
+                activeImg = null;
+            }
+
+            function onMouseDown(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                startX = e.clientX;
+                startW = activeImg.getBoundingClientRect().width;
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            }
+
+            function onMouseMove(e) {
+                var newW = Math.max(50, startW + (e.clientX - startX));
+                activeImg.style.width  = newW + 'px';
+                activeImg.style.height = 'auto';
+                updateOverlay();
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            function onTouchStart(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                startX = e.touches[0].clientX;
+                startW = activeImg.getBoundingClientRect().width;
+                document.addEventListener('touchmove', onTouchMove, { passive: false });
+                document.addEventListener('touchend', onTouchEnd);
+            }
+
+            function onTouchMove(e) {
+                e.preventDefault();
+                var newW = Math.max(50, startW + (e.touches[0].clientX - startX));
+                activeImg.style.width  = newW + 'px';
+                activeImg.style.height = 'auto';
+                updateOverlay();
+            }
+
+            function onTouchEnd() {
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+            }
+
+            editorEl.addEventListener('click', function(e) {
+                if (e.target.tagName === 'IMG') {
+                    showOverlay(e.target);
+                } else if (!overlay || !overlay.contains(e.target)) {
+                    removeOverlay();
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!overlay) return;
+                if (!container.contains(e.target)) removeOverlay();
+            });
+        }
+
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            placeholder: '내용을 입력하세요...',
+            modules: {
+                toolbar: {
+                    container: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        ['link', 'image'],
+                        ['clean']
+                    ],
+                    handlers: { image: imageHandler }
+                }
+            }
+        });
+
+        initImageResize(quill);
+
+        function imageHandler() {
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*');
+            input.click();
+            input.onchange = async function() {
+                const file = input.files[0];
+                if (!file) return;
+                if (file.size > 10 * 1024 * 1024) { alert('파일 크기는 10MB를 초과할 수 없습니다.'); return; }
+                if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) { alert('JPG, PNG, GIF, WEBP 파일만 업로드 가능합니다.'); return; }
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    const range = quill.getSelection(true);
+                    quill.insertText(range.index, '이미지 업로드 중...');
+                    quill.setSelection(range.index + 13);
+                    const response = await fetch('/api/upload/image', { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (response.ok && data.url) {
+                        quill.deleteText(range.index, 13);
+                        quill.insertEmbed(range.index, 'image', data.url);
+                        quill.setSelection(range.index + 1);
+                    } else {
+                        quill.deleteText(range.index, 13);
+                        alert(data.error || '이미지 업로드에 실패했습니다.');
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('이미지 업로드 중 오류가 발생했습니다.');
+                }
+            };
+        }
+
+        document.querySelector('form.admin-form').addEventListener('submit', function(e) {
+            document.getElementById('content').value = quill.root.innerHTML;
+            if (quill.getText().trim().length === 0) {
+                e.preventDefault();
+                alert('내용을 입력하세요.');
+            }
+        });
+    </script>
 </body>
 </html>

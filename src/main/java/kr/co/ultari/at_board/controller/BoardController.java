@@ -19,6 +19,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -90,12 +91,21 @@ public class BoardController {
                 ? boardService.searchBoards(categoryId, searchType, keyword, pageable)
                 : boardService.getBoardsByCategoryIdPaged(categoryId, pageable);
 
+        Map<String, List<Long>> newPostsByCategory = boardService.getNewPostsByCategoryMap(LocalDateTime.now().minusHours(24));
+
+        List<Long> boardIds = boardsPage.getContent().stream().map(Board::getId).collect(Collectors.toList());
+        Set<Long> likedBoardIds = boardLikeService.getLikedBoardIds(boardIds, currentUser.getUserId());
+        Set<Long> commentedBoardIds = commentService.getCommentedBoardIds(boardIds, currentUser.getUserId());
+
         model.addAttribute("boards", boardsPage);
         model.addAttribute("categories", categories);
         model.addAttribute("selectedCategory", selectedCategory);
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("searchType", searchType);
         model.addAttribute("keyword", keyword);
+        model.addAttribute("newPostsByCategory", newPostsByCategory);
+        model.addAttribute("likedBoardIds", likedBoardIds);
+        model.addAttribute("commentedBoardIds", commentedBoardIds);
         return "pages/board/list";
     }
 
@@ -134,16 +144,24 @@ public class BoardController {
                 : boardService.getBoardsByCategoryIdPaged(categoryId, pageable);
 
         // Board 엔티티를 직접 직렬화하면 Hibernate 프록시 문제가 발생하므로 필요한 필드만 Map으로 변환
+        List<Long> apiPageBoardIds = boardsPage.getContent().stream().map(Board::getId).collect(Collectors.toList());
+        Set<Long> apiLikedIds = boardLikeService.getLikedBoardIds(apiPageBoardIds, currentUser.getUserId());
+        Set<Long> apiCommentedIds = commentService.getCommentedBoardIds(apiPageBoardIds, currentUser.getUserId());
+
         List<Map<String, Object>> boardDtos = boardsPage.getContent().stream().map(board -> {
             Map<String, Object> dto = new HashMap<>();
             dto.put("id", board.getId());
             dto.put("title", board.getTitle());
             dto.put("authorName", board.getAuthorName());
             dto.put("createdAt", board.getCreatedAt());
+            dto.put("createdAtEpochMilli", board.getCreatedAtEpochMilli());
+            dto.put("categoryId", board.getCategory() != null ? board.getCategory().getId() : null);
             dto.put("content", board.getContent());
             dto.put("likeCount", board.getLikeCount());
             dto.put("commentCount", board.getCommentCount());
             dto.put("viewCount", board.getViewCount());
+            dto.put("isLiked", apiLikedIds.contains(board.getId()));
+            dto.put("isCommented", apiCommentedIds.contains(board.getId()));
             return dto;
         }).collect(Collectors.toList());
 
@@ -158,8 +176,12 @@ public class BoardController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}")
-    public String detail(@PathVariable Long id, Model model, HttpSession session) {
+    @RequestMapping(value = "/{id}", method = {RequestMethod.GET, RequestMethod.POST})
+    public String detail(@PathVariable Long id,
+                         @RequestParam(required = false) Long categoryId,
+                         @RequestParam(required = false) String searchType,
+                         @RequestParam(required = false) String keyword,
+                         Model model, HttpSession session) {
         User currentUser = (User) session.getAttribute("currentUser");
         if (currentUser == null) {
             return "redirect:/board";
@@ -193,10 +215,15 @@ public class BoardController {
         // 좋아요 여부 확인
         boolean isLiked = boardLikeService.isLiked(id, currentUser.getUserId());
 
+        Long backCategoryId = categoryId != null ? categoryId : (board.getCategory() != null ? board.getCategory().getId() : null);
+
         model.addAttribute("board", board);
         model.addAttribute("comments", comments);
         model.addAttribute("isLiked", isLiked);
         model.addAttribute("currentUser", currentUser);
+        model.addAttribute("backCategoryId", backCategoryId);
+        model.addAttribute("backSearchType", searchType);
+        model.addAttribute("backKeyword", keyword);
         return "pages/board/detail";
     }
 
@@ -326,6 +353,7 @@ public class BoardController {
     @PostMapping("/{boardId}/comments")
     public String createComment(@PathVariable Long boardId,
                                  @RequestParam String content,
+                                 @RequestParam(required = false) Long parentId,
                                  HttpSession session) {
         User currentUser = (User) session.getAttribute("currentUser");
         if (currentUser == null) {
@@ -338,9 +366,29 @@ public class BoardController {
         }
 
         try {
-            commentService.createComment(board, content, currentUser);
+            commentService.createComment(board, content, currentUser, parentId);
         } catch (Exception e) {
             log.error("Failed to create comment: {}", e.getMessage());
+        }
+
+        return "redirect:/board/" + boardId;
+    }
+
+    // 댓글 수정
+    @PostMapping("/comments/{commentId}/edit")
+    public String updateComment(@PathVariable Long commentId,
+                                 @RequestParam String content,
+                                 @RequestParam Long boardId,
+                                 HttpSession session) {
+        User currentUser = (User) session.getAttribute("currentUser");
+        if (currentUser == null) {
+            return "redirect:/board";
+        }
+
+        try {
+            commentService.updateComment(commentId, content, currentUser);
+        } catch (Exception e) {
+            log.error("Failed to update comment: {}", e.getMessage());
         }
 
         return "redirect:/board/" + boardId;

@@ -60,8 +60,8 @@ public class FileController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // 로그인 체크
-            if (session.getAttribute("currentUser") == null) {
+            // 로그인 체크 (일반 사용자 또는 관리자)
+            if (session.getAttribute("currentUser") == null && session.getAttribute("adminUser") == null) {
                 Map<String, Object> error = new HashMap<>();
                 error.put("error", "로그인이 필요합니다.");
                 return ResponseEntity.status(401).body(error);

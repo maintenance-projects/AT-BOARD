@@ -48,10 +48,12 @@
                 <a th:each="category : ${categories}"
                    th:href="@{/board(categoryId=${category.id})}"
                    th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? 'category-menu__item--active' : ''}"
-                   class="category-menu__item">
+                   class="category-menu__item"
+                   th:attr="data-category-id=${category.id}">
                     <span th:text="${category.name}">게시판명</span>
                     <span th:class="${category.deptSpecific ? 'cat-badge cat-badge--dept' : 'cat-badge cat-badge--company'}"
                           th:text="${category.deptSpecific ? '부서' : '전사'}"></span>
+                    <span class="new-badge">N</span>
                 </a>
             </nav>
         </div>
@@ -106,10 +108,12 @@
                         <a th:each="category : ${categories}"
                            th:href="@{/board(categoryId=${category.id})}"
                            th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? ' board-sidebar__item--active' : ''}"
-                           class="board-sidebar__item">
+                           class="board-sidebar__item"
+                           th:attr="data-category-id=${category.id}">
                             <span th:text="${category.name}">게시판명</span>
                             <span th:class="${category.deptSpecific ? 'cat-badge cat-badge--dept' : 'cat-badge cat-badge--company'}"
                                   th:text="${category.deptSpecific ? '부서' : '전사'}"></span>
+                            <span class="new-badge">N</span>
                         </a>
                     </nav>
                 </aside>
@@ -125,15 +129,22 @@
                     <section class="board-list" aria-label="게시글 목록">
                         <div th:if="${boards.totalElements == 0}" class="empty">
                             <p class="empty__text">등록된 게시글이 없습니다.</p>
-                            <a href="/board/write" class="btn btn--primary">첫 글 작성하기</a>
                         </div>
 
                         <div th:unless="${boards.totalElements == 0}">
                             <!-- 게시글 목록 -->
                             <div class="board-items" id="boardItems">
-                                <article th:each="board : ${boards.content}" class="board-item" th:onclick="'location.href=\'/board/' + ${board.id} + '\''">
+                                <article th:each="board : ${boards.content}" class="board-item"
+                                         onclick="location.href=this.getAttribute('data-href')"
+                                         th:attr="data-href=@{/board/{id}(id=${board.id}, categoryId=${selectedCategory.id}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})},data-board-id=${board.id},data-created-at=${board.createdAtEpochMilli},data-category-id=${board.category.id}">
                                     <div class="board-item__header">
-                                        <h2 class="board-item__title" th:text="${board.title}">제목</h2>
+                                        <h2 class="board-item__title">
+                                        <span th:text="${board.title}">제목</span>
+                                        <span th:if="${board.hasImage}" class="board-item__img-badge" title="이미지 포함">
+                                            <span class="ico ico--image" aria-hidden="true"></span>
+                                        </span>
+                                        <span class="new-badge">N</span>
+                                    </h2>
                                         <div class="board-item__meta">
                                             <span class="board-item__author" th:text="${board.authorName}">작성자</span>
                                             <span class="board-item__dot">·</span>
@@ -142,11 +153,11 @@
                                     </div>
                                     <p class="board-item__preview" th:text="${#strings.abbreviate(board.plainContent, 100)}">내용 미리보기</p>
                                     <div class="board-item__footer">
-                                        <span class="board-item__stat">
-                                            <span class="ico ico--heart-outline" aria-hidden="true"></span>
+                                        <span class="board-item__stat" th:classappend="${likedBoardIds.contains(board.id)} ? 'board-item__stat--liked'">
+                                            <span class="ico" th:classappend="${likedBoardIds.contains(board.id)} ? 'ico--heart' : 'ico--heart-outline'" aria-hidden="true"></span>
                                             <span th:text="${board.likeCount}">0</span>
                                         </span>
-                                        <span class="board-item__stat">
+                                        <span class="board-item__stat" th:classappend="${commentedBoardIds.contains(board.id)} ? 'board-item__stat--commented'">
                                             <span class="ico ico--comment" aria-hidden="true"></span>
                                             <span th:text="${board.commentCount}">0</span>
                                         </span>
@@ -339,13 +350,28 @@
                 function createBoardItem(board) {
                     const article = document.createElement('article');
                     article.className = 'board-item';
-                    article.onclick = function() { location.href = '/board/' + board.id; };
+                    article.onclick = function() {
+                        var url = '/board/' + board.id + '?categoryId=' + categoryId;
+                        if (keyword) {
+                            url += '&searchType=' + encodeURIComponent(searchType) + '&keyword=' + encodeURIComponent(keyword);
+                        }
+                        location.href = url;
+                    };
 
                     const createdAt = formatDate(board.createdAt);
 
+                    const hasImage = board.content && board.content.includes('<img');
+                    const isNewPost = window._atbRead && window._atbRead.isNewUnread(board.id, board.createdAtEpochMilli);
+                    article.setAttribute('data-board-id', board.id);
+                    article.setAttribute('data-created-at', board.createdAtEpochMilli || 0);
+                    article.setAttribute('data-category-id', board.categoryId || '');
                     article.innerHTML = `
                         <div class="board-item__header">
-                            <h2 class="board-item__title">${escapeHtml(board.title)}</h2>
+                            <h2 class="board-item__title">
+                                <span>${escapeHtml(board.title)}</span>
+                                ${hasImage ? '<span class="board-item__img-badge" title="이미지 포함"><span class="ico ico--image" aria-hidden="true"></span></span>' : ''}
+                                ${isNewPost ? '<span class="new-badge" style="display:inline;">N</span>' : '<span class="new-badge">N</span>'}
+                            </h2>
                             <div class="board-item__meta">
                                 <span class="board-item__author">${escapeHtml(board.authorName)}</span>
                                 <span class="board-item__dot">·</span>
@@ -354,11 +380,11 @@
                         </div>
                         <p class="board-item__preview">${escapeHtml(abbreviate(stripHtml(board.content), 100))}</p>
                         <div class="board-item__footer">
-                            <span class="board-item__stat">
-                                <span class="ico ico--heart-outline" aria-hidden="true"></span>
+                            <span class="${board.isLiked ? 'board-item__stat board-item__stat--liked' : 'board-item__stat'}">
+                                <span class="${board.isLiked ? 'ico ico--heart' : 'ico ico--heart-outline'}" aria-hidden="true"></span>
                                 <span>${board.likeCount || 0}</span>
                             </span>
-                            <span class="board-item__stat">
+                            <span class="${board.isCommented ? 'board-item__stat board-item__stat--commented' : 'board-item__stat'}">
                                 <span class="ico ico--comment" aria-hidden="true"></span>
                                 <span>${board.commentCount || 0}</span>
                             </span>
@@ -402,6 +428,73 @@
                     } else {
                         window.removeEventListener('scroll', handleInfiniteScroll);
                     }
+                });
+            })();
+        </script>
+        <script th:inline="javascript">
+            // N 배지 초기화
+            (function() {
+                var TTL = 24 * 60 * 60 * 1000;
+                var newPostsByCategory = /*[[${newPostsByCategory}]]*/ {};
+
+                function getReadSet() {
+                    try { return JSON.parse(localStorage.getItem('atboard_read') || '{}'); }
+                    catch(e) { return {}; }
+                }
+
+                function isNewUnread(id, ts) {
+                    var readSet = getReadSet();
+                    return (Date.now() - ts) < TTL && !readSet[String(id)];
+                }
+
+                // 무한스크롤에서도 사용할 수 있도록 전역 등록
+                window._atbRead = {
+                    isNewUnread: isNewUnread,
+                    getReadSet: getReadSet
+                };
+
+                // 오래된 읽음 기록 정리 (48시간 초과)
+                (function cleanup() {
+                    try {
+                        var readSet = getReadSet();
+                        var cutoff = Date.now() - 2 * TTL;
+                        var changed = false;
+                        Object.keys(readSet).forEach(function(k) {
+                            if (readSet[k] < cutoff) { delete readSet[k]; changed = true; }
+                        });
+                        if (changed) localStorage.setItem('atboard_read', JSON.stringify(readSet));
+                    } catch(e) {}
+                })();
+
+                // 배지 표시/숨김을 매번 새로 계산 (bfcache 복원 시에도 호출됨)
+                function applyBadges() {
+                    var readSet = getReadSet();
+
+                    // 게시글 N 배지
+                    document.querySelectorAll('.board-item[data-board-id]').forEach(function(item) {
+                        var id = item.getAttribute('data-board-id');
+                        var ts = parseInt(item.getAttribute('data-created-at'), 10);
+                        var badge = item.querySelector('.new-badge');
+                        if (!badge) return;
+                        badge.style.display = ((Date.now() - ts) < TTL && !readSet[id]) ? 'inline' : 'none';
+                    });
+
+                    // 게시판 N 배지 (사이드바 + 모바일 메뉴) — board-item 제외
+                    document.querySelectorAll('[data-category-id]:not(.board-item)').forEach(function(el) {
+                        var catId = el.getAttribute('data-category-id');
+                        var postIds = newPostsByCategory[catId];
+                        var badge = el.querySelector('.new-badge');
+                        if (!badge) return;
+                        var hasUnread = postIds && postIds.some(function(pid) { return !readSet[String(pid)]; });
+                        badge.style.display = hasUnread ? 'inline' : 'none';
+                    });
+                }
+
+                applyBadges();
+
+                // 뒤로가기 등 bfcache 복원 시 재평가
+                window.addEventListener('pageshow', function(e) {
+                    if (e.persisted) applyBadges();
                 });
             })();
         </script>

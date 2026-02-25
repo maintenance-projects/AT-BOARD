@@ -8,9 +8,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface BoardLikeRepository extends JpaRepository<BoardLike, BoardLike.BoardLikeId> {
     long countByBoardId(Long boardId);
+
+    // 현재 페이지 게시글 중 사용자가 좋아요한 boardId 목록
+    @Query("SELECT bl.boardId FROM BoardLike bl WHERE bl.userId = :userId AND bl.boardId IN :boardIds")
+    List<Long> findLikedBoardIds(@Param("userId") String userId, @Param("boardIds") List<Long> boardIds);
 
     boolean existsByBoardIdAndUserId(Long boardId, String userId);
 

@@ -214,6 +214,7 @@ body {
     padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid #e0e0e0;
+    white-space: nowrap;
 }
 
 .admin-table th {
@@ -398,6 +399,194 @@ body {
 
 .board-detail-content {
     line-height: 1.6;
+}
+
+.board-detail-content__body {
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.board-detail-content__body img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 10px 0;
+}
+
+.board-detail-content__body h1,
+.board-detail-content__body h2,
+.board-detail-content__body h3 {
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.board-detail-content__body h1 { font-size: 24px; }
+.board-detail-content__body h2 { font-size: 20px; }
+.board-detail-content__body h3 { font-size: 18px; }
+
+.board-detail-content__body ul,
+.board-detail-content__body ol {
+    margin: 10px 0;
+    padding-left: 24px;
+}
+
+.board-detail-content__body li {
+    margin: 5px 0;
+}
+
+.board-detail-content__body a {
+    color: #3498db;
+    text-decoration: underline;
+}
+
+.board-detail-content__body pre {
+    background: #f5f5f5;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.board-detail-content__body code {
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+/* Quill Editor (Admin) */
+.admin-quill-editor {
+    background: white;
+    border-radius: 4px;
+}
+
+.admin-quill-editor .ql-toolbar {
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.admin-quill-editor .ql-container {
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    min-height: 400px;
+}
+
+.admin-quill-editor .ql-editor {
+    min-height: 400px;
+    font-size: 16px !important;
+}
+
+.admin-quill-editor .ql-editor img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* 이미지 뷰어 (라이트박스) */
+.img-viewer {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.93);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.img-viewer__close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 36px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+    z-index: 1;
+    opacity: 0.8;
+}
+.img-viewer__close:hover { opacity: 1; }
+
+.img-viewer__prev,
+.img-viewer__next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 18px 14px;
+    border-radius: 4px;
+    z-index: 1;
+    transition: background 0.15s;
+}
+.img-viewer__prev { left: 12px; }
+.img-viewer__next { right: 12px; }
+.img-viewer__prev:hover,
+.img-viewer__next:hover { background: rgba(255, 255, 255, 0.3); }
+
+.img-viewer__main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 52px 60px 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.img-viewer__main-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.6);
+    display: block;
+}
+
+.img-viewer__counter {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+}
+
+.img-viewer__thumbs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 12px 12px;
+    max-width: 100%;
+    flex-shrink: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+.img-viewer__thumbs::-webkit-scrollbar { height: 3px; }
+.img-viewer__thumbs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+
+.img-viewer__thumb {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.45;
+    border: 2px solid transparent;
+    flex-shrink: 0;
+    transition: opacity 0.15s, border-color 0.15s;
+}
+.img-viewer__thumb:hover { opacity: 0.75; }
+.img-viewer__thumb--active {
+    opacity: 1;
+    border-color: white;
 }
 
 /* Link */

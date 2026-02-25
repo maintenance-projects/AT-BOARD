@@ -8,6 +8,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "comments", indexes = {
@@ -48,6 +50,13 @@ public class Comment {
     @CreationTimestamp
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "PARENT_ID")
+    private Long parentId;
+
+    @Transient
+    @Builder.Default
+    private List<Comment> replies = new ArrayList<>();
 
     // 부서명 + 이름 + 직책명 조합
     public String getAuthorDisplayName() {

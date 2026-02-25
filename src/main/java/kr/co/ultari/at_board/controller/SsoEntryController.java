@@ -5,8 +5,9 @@ import kr.co.ultari.at_board.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -23,7 +24,7 @@ public class SsoEntryController {
 
     private final UserService userService;
 
-    @GetMapping("/{userId}")
+    @RequestMapping(value = "/{userId}", method = {RequestMethod.GET, RequestMethod.POST})
     public String ssoEntry(@PathVariable String userId,
                            HttpSession session,
                            HttpServletResponse response) throws IOException {

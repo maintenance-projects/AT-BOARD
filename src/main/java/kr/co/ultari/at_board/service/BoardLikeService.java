@@ -9,6 +9,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -19,6 +24,11 @@ public class BoardLikeService {
 
     public boolean isLiked(Long boardId, String userId) {
         return boardLikeRepository.existsByBoardIdAndUserId(boardId, userId);
+    }
+
+    public Set<Long> getLikedBoardIds(List<Long> boardIds, String userId) {
+        if (boardIds == null || boardIds.isEmpty()) return Collections.emptySet();
+        return new HashSet<>(boardLikeRepository.findLikedBoardIds(userId, boardIds));
     }
 
     @Transactional("primaryTransactionManager")
