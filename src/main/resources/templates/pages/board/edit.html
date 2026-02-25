@@ -47,6 +47,29 @@
                     ></textarea>
                 </div>
 
+                <!-- 첨부파일 영역 -->
+                <div class="form-group">
+                    <div class="attachment-zone" id="attachmentZone">
+                        <span class="attachment-zone__icon">📎</span>
+                        <span class="attachment-zone__text">파일을 드래그하거나 클릭하여 첨부하세요</span>
+                        <span class="attachment-zone__hint">실행파일(.exe, .sh, .bat 등) 제외, 파일당 최대 <span th:text="${maxAttachmentSizeMb}">50</span>MB</span>
+                        <input type="file" id="attachmentInput" multiple style="display:none;" />
+                    </div>
+                    <div class="attachment-list" id="attachmentList">
+                        <!-- 기존 첨부파일 -->
+                        <div th:each="attachment : ${attachments}" class="attachment-item attachment-item--existing"
+                             th:data-id="${attachment.id}">
+                            <span class="attachment-item__name" th:text="${attachment.originalName}">파일명</span>
+                            <span class="attachment-item__size" th:text="${attachment.fileSizeDisplay}">크기</span>
+                            <button type="button" class="attachment-item__remove"
+                                    th:onclick="'removeExisting(this,' + ${attachment.id} + ')'">×</button>
+                            <input type="hidden" name="removedAttachmentIds"
+                                   th:id="'remove-hidden-' + ${attachment.id}" disabled="disabled"
+                                   th:value="${attachment.id}" />
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="button" onclick="history.back()" class="btn btn--secondary">취소</button>
                     <button type="submit" class="btn btn--primary">수정</button>
@@ -255,6 +278,115 @@
             function submitForm() {
                 document.getElementById('editForm').querySelector('[type="submit"]').click();
             }
+        </script>
+
+        <!-- 첨부파일 스크립트 -->
+        <script th:inline="javascript">
+            var blockedExtensions = (/*[[${blockedExtensionsStr}]]*/ 'exe,sh,bat').split(',').map(function(e) { return e.trim(); });
+
+            function removeExisting(btn, attachmentId) {
+                var item = btn.closest('.attachment-item--existing');
+                var hidden = document.getElementById('remove-hidden-' + attachmentId);
+                if (hidden) {
+                    hidden.removeAttribute('disabled');
+                    // item을 제거하기 전에 hidden input을 form으로 이동시켜야
+                    // DOM 제거 후에도 폼 제출 시 값이 전송됨
+                    document.getElementById('editForm').appendChild(hidden);
+                }
+                if (item) item.remove();
+            }
+
+            (function() {
+                var maxSizeMb = /*[[${maxAttachmentSizeMb}]]*/ 50;
+                var maxSizeBytes = maxSizeMb * 1024 * 1024;
+                var _blockedExtensions = blockedExtensions;
+
+                var zone = document.getElementById('attachmentZone');
+                var input = document.getElementById('attachmentInput');
+                var list = document.getElementById('attachmentList');
+
+                zone.addEventListener('click', function() { input.click(); });
+                input.addEventListener('change', function() { handleFiles(input.files); input.value = ''; });
+
+                zone.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    zone.classList.add('attachment-zone--drag-over');
+                });
+                zone.addEventListener('dragleave', function() {
+                    zone.classList.remove('attachment-zone--drag-over');
+                });
+                zone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    zone.classList.remove('attachment-zone--drag-over');
+                    handleFiles(e.dataTransfer.files);
+                });
+
+                function handleFiles(files) {
+                    Array.from(files).forEach(function(file) { uploadFile(file); });
+                }
+
+                function uploadFile(file) {
+                    var dotIdx = file.name.lastIndexOf('.');
+                    if (dotIdx >= 0) {
+                        var ext = file.name.substring(dotIdx + 1).toLowerCase();
+                        if (_blockedExtensions.indexOf(ext) >= 0) {
+                            alert('업로드할 수 없는 파일 형식입니다: .' + ext);
+                            return;
+                        }
+                    }
+                    if (file.size > maxSizeBytes) {
+                        alert('파일 크기는 ' + maxSizeMb + 'MB를 초과할 수 없습니다.\n(선택 파일: ' + (file.size / 1024 / 1024).toFixed(1) + 'MB)');
+                        return;
+                    }
+                    var formData = new FormData();
+                    formData.append('file', file);
+
+                    var item = document.createElement('div');
+                    item.className = 'attachment-item attachment-item--uploading';
+                    item.textContent = file.name + ' (업로드 중...)';
+                    list.appendChild(item);
+
+                    fetch('/api/upload/attachment', { method: 'POST', body: formData })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data.error) {
+                                item.remove();
+                                alert(data.error);
+                                return;
+                            }
+                            item.className = 'attachment-item';
+                            item.innerHTML = '';
+
+                            var nameSpan = document.createElement('span');
+                            nameSpan.className = 'attachment-item__name';
+                            nameSpan.textContent = data.originalName;
+
+                            var sizeSpan = document.createElement('span');
+                            sizeSpan.className = 'attachment-item__size';
+                            sizeSpan.textContent = data.fileSizeDisplay;
+
+                            var removeBtn = document.createElement('button');
+                            removeBtn.type = 'button';
+                            removeBtn.className = 'attachment-item__remove';
+                            removeBtn.textContent = '×';
+                            removeBtn.addEventListener('click', function() { item.remove(); });
+
+                            var hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = 'attachmentIds';
+                            hiddenInput.value = data.id;
+
+                            item.appendChild(nameSpan);
+                            item.appendChild(sizeSpan);
+                            item.appendChild(removeBtn);
+                            item.appendChild(hiddenInput);
+                        })
+                        .catch(function() {
+                            item.remove();
+                            alert('파일 업로드 중 오류가 발생했습니다.');
+                        });
+                }
+            })();
         </script>
     </th:block>
 </body>

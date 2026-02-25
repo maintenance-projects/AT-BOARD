@@ -26,6 +26,10 @@
                     <span class="admin-sidebar__icon">📝</span>
                     게시물 관리
                 </a>
+                <a href="/admin/settings" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">⚙️</span>
+                    환경설정
+                </a>
             </nav>
             <div class="admin-sidebar__footer">
                 <div class="admin-sidebar__user" th:if="${admin}">
@@ -66,6 +70,16 @@
                             <label class="form-label">내용 <span class="required">*</span></label>
                             <div id="editor" class="admin-quill-editor"></div>
                             <textarea id="content" name="content" style="display: none;"></textarea>
+                        </div>
+
+                        <!-- 첨부파일 영역 (관리자 - 용량·확장자 제한 없음) -->
+                        <div class="form-group">
+                            <label class="form-label">첨부파일</label>
+                            <div class="admin-attachment-zone" id="attachmentZone">
+                                <span>📎 파일을 드래그하거나 클릭하여 첨부하세요 (제한 없음)</span>
+                                <input type="file" id="attachmentInput" multiple style="display:none;" />
+                            </div>
+                            <div class="admin-attachment-list" id="attachmentList"></div>
                         </div>
 
                         <div class="form-actions">
@@ -233,6 +247,121 @@
                 alert('내용을 입력하세요.');
             }
         });
+    </script>
+
+    <style>
+        .admin-attachment-zone {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            border: 2px dashed #d1d5db;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #6b7280;
+            background: #f9fafb;
+            transition: border-color .2s, background .2s;
+        }
+        .admin-attachment-zone:hover,
+        .admin-attachment-zone--drag-over {
+            border-color: #6366f1;
+            background: #eef2ff;
+        }
+        .admin-attachment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .admin-attachment-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .admin-attachment-item--uploading { color: #9ca3af; font-style: italic; }
+        .admin-attachment-item__name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .admin-attachment-item__size { flex-shrink: 0; font-size: 12px; color: #9ca3af; }
+        .admin-attachment-item__remove {
+            flex-shrink: 0; width: 20px; height: 20px; border: none; background: none;
+            cursor: pointer; color: #9ca3af; font-size: 16px; line-height: 1; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; transition: background .15s, color .15s;
+        }
+        .admin-attachment-item__remove:hover { background: #fee2e2; color: #ef4444; }
+    </style>
+    <script>
+        (function() {
+            var zone  = document.getElementById('attachmentZone');
+            var input = document.getElementById('attachmentInput');
+            var list  = document.getElementById('attachmentList');
+
+            zone.addEventListener('click', function() { input.click(); });
+            input.addEventListener('change', function() { handleFiles(input.files); input.value = ''; });
+            zone.addEventListener('dragover', function(e) {
+                e.preventDefault(); zone.classList.add('admin-attachment-zone--drag-over');
+            });
+            zone.addEventListener('dragleave', function() {
+                zone.classList.remove('admin-attachment-zone--drag-over');
+            });
+            zone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                zone.classList.remove('admin-attachment-zone--drag-over');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            function handleFiles(files) {
+                Array.from(files).forEach(function(file) { uploadFile(file); });
+            }
+
+            function uploadFile(file) {
+                var formData = new FormData();
+                formData.append('file', file);
+
+                var item = document.createElement('div');
+                item.className = 'admin-attachment-item admin-attachment-item--uploading';
+                item.textContent = file.name + ' (업로드 중...)';
+                list.appendChild(item);
+
+                fetch('/api/upload/attachment', { method: 'POST', body: formData })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.error) { item.remove(); alert(data.error); return; }
+                        item.className = 'admin-attachment-item';
+                        item.innerHTML = '';
+
+                        var nameSpan = document.createElement('span');
+                        nameSpan.className = 'admin-attachment-item__name';
+                        nameSpan.textContent = data.originalName;
+
+                        var sizeSpan = document.createElement('span');
+                        sizeSpan.className = 'admin-attachment-item__size';
+                        sizeSpan.textContent = data.fileSizeDisplay;
+
+                        var removeBtn = document.createElement('button');
+                        removeBtn.type = 'button';
+                        removeBtn.className = 'admin-attachment-item__remove';
+                        removeBtn.textContent = '×';
+                        removeBtn.addEventListener('click', function() { item.remove(); });
+
+                        var hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'attachmentIds';
+                        hiddenInput.value = data.id;
+
+                        item.appendChild(nameSpan);
+                        item.appendChild(sizeSpan);
+                        item.appendChild(removeBtn);
+                        item.appendChild(hiddenInput);
+                    })
+                    .catch(function() { item.remove(); alert('파일 업로드 중 오류가 발생했습니다.'); });
+            }
+        })();
     </script>
 </body>
 </html>

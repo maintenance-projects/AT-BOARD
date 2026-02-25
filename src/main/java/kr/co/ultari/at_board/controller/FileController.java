@@ -1,5 +1,8 @@
 package kr.co.ultari.at_board.controller;
 
+import kr.co.ultari.at_board.model.primary.BoardAttachment;
+import kr.co.ultari.at_board.service.BoardAttachmentService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -8,7 +11,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpSession;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,7 +25,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/upload")
 @Slf4j
+@RequiredArgsConstructor
 public class FileController {
+
+    private final BoardAttachmentService boardAttachmentService;
 
     @Value("${file.upload.path:uploads}")
     private String uploadPath;
@@ -139,6 +144,43 @@ public class FileController {
 
         } catch (IOException e) {
             log.error("Failed to upload image", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "파일 업로드 중 오류가 발생했습니다.");
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    @PostMapping("/attachment")
+    public ResponseEntity<Map<String, Object>> uploadAttachment(
+            @RequestParam("file") MultipartFile file,
+            HttpSession session) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        if (session.getAttribute("currentUser") == null && session.getAttribute("adminUser") == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "로그인이 필요합니다.");
+            return ResponseEntity.status(401).body(error);
+        }
+
+        try {
+            boolean isAdmin = session.getAttribute("adminUser") != null;
+            BoardAttachment attachment = isAdmin
+                    ? boardAttachmentService.uploadAttachmentAdmin(file)
+                    : boardAttachmentService.uploadAttachment(file);
+            response.put("id", attachment.getId());
+            response.put("originalName", attachment.getOriginalName());
+            response.put("fileSize", attachment.getFileSize());
+            response.put("fileSizeDisplay", attachment.getFileSizeDisplay());
+            response.put("mimeType", attachment.getMimeType());
+            log.info("Attachment uploaded: {} ({}) isAdmin={}", attachment.getOriginalName(), attachment.getId(), isAdmin);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (IOException e) {
+            log.error("Failed to upload attachment", e);
             Map<String, Object> error = new HashMap<>();
             error.put("error", "파일 업로드 중 오류가 발생했습니다.");
             return ResponseEntity.internalServerError().body(error);

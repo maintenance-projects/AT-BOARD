@@ -1,24 +1,32 @@
 package kr.co.ultari.at_board.controller;
 
 import kr.co.ultari.at_board.model.primary.Board;
+import kr.co.ultari.at_board.model.primary.BoardAttachment;
 import kr.co.ultari.at_board.model.primary.BoardCategory;
 import kr.co.ultari.at_board.model.primary.Comment;
 import kr.co.ultari.at_board.model.secondary.User;
+import kr.co.ultari.at_board.service.AppSettingService;
+import kr.co.ultari.at_board.service.BoardAttachmentService;
 import kr.co.ultari.at_board.service.BoardCategoryService;
 import kr.co.ultari.at_board.service.BoardLikeService;
 import kr.co.ultari.at_board.service.BoardService;
 import kr.co.ultari.at_board.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -38,6 +46,8 @@ public class BoardController {
     private final BoardCategoryService boardCategoryService;
     private final CommentService commentService;
     private final BoardLikeService boardLikeService;
+    private final BoardAttachmentService boardAttachmentService;
+    private final AppSettingService appSettingService;
 
     @GetMapping
     public String list(@RequestParam(required = false) Long categoryId,
@@ -215,11 +225,15 @@ public class BoardController {
         // 좋아요 여부 확인
         boolean isLiked = boardLikeService.isLiked(id, currentUser.getUserId());
 
+        // 첨부파일 목록
+        List<BoardAttachment> attachments = boardAttachmentService.getByBoardId(id);
+
         Long backCategoryId = categoryId != null ? categoryId : (board.getCategory() != null ? board.getCategory().getId() : null);
 
         model.addAttribute("board", board);
         model.addAttribute("comments", comments);
         model.addAttribute("isLiked", isLiked);
+        model.addAttribute("attachments", attachments);
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("backCategoryId", backCategoryId);
         model.addAttribute("backSearchType", searchType);
@@ -249,6 +263,8 @@ public class BoardController {
         model.addAttribute("categories", categories);
         model.addAttribute("selectedCategoryId", categoryId);
         model.addAttribute("currentUser", currentUser);
+        model.addAttribute("maxAttachmentSizeMb", appSettingService.getMaxAttachmentSize() / (1024 * 1024));
+        model.addAttribute("blockedExtensionsStr", String.join(",", appSettingService.getBlockedExtensions()));
         return "pages/board/write";
     }
 
@@ -256,6 +272,7 @@ public class BoardController {
     public String write(@RequestParam String title,
                         @RequestParam String content,
                         @RequestParam Long categoryId,
+                        @RequestParam(required = false) List<Long> attachmentIds,
                         HttpSession session) {
         User currentUser = (User) session.getAttribute("currentUser");
         if (currentUser == null) {
@@ -274,7 +291,10 @@ public class BoardController {
         }
 
         try {
-            boardService.createBoard(title, content, currentUser, category);
+            Board board = boardService.createBoard(title, content, currentUser, category);
+            if (attachmentIds != null && !attachmentIds.isEmpty()) {
+                boardAttachmentService.assignToBoard(attachmentIds, board.getId());
+            }
         } catch (IllegalArgumentException e) {
             log.error("Failed to create board: {}", e.getMessage());
             return "redirect:/board/write";
@@ -295,8 +315,13 @@ public class BoardController {
             return "redirect:/board";
         }
 
+        List<BoardAttachment> attachments = boardAttachmentService.getByBoardId(id);
+
         model.addAttribute("board", board);
+        model.addAttribute("attachments", attachments);
         model.addAttribute("currentUser", currentUser);
+        model.addAttribute("maxAttachmentSizeMb", appSettingService.getMaxAttachmentSize() / (1024 * 1024));
+        model.addAttribute("blockedExtensionsStr", String.join(",", appSettingService.getBlockedExtensions()));
         return "pages/board/edit";
     }
 
@@ -304,6 +329,8 @@ public class BoardController {
     public String edit(@PathVariable Long id,
                        @RequestParam String title,
                        @RequestParam String content,
+                       @RequestParam(required = false) List<Long> attachmentIds,
+                       @RequestParam(required = false) List<Long> removedAttachmentIds,
                        HttpSession session) {
         User currentUser = (User) session.getAttribute("currentUser");
         if (currentUser == null) {
@@ -312,6 +339,18 @@ public class BoardController {
 
         try {
             boardService.updateBoard(id, title, content, currentUser);
+
+            // 삭제 요청된 첨부파일 제거
+            if (removedAttachmentIds != null) {
+                for (Long attachmentId : removedAttachmentIds) {
+                    boardAttachmentService.deleteAttachment(attachmentId);
+                }
+            }
+
+            // 새 첨부파일 할당
+            if (attachmentIds != null && !attachmentIds.isEmpty()) {
+                boardAttachmentService.assignToBoard(attachmentIds, id);
+            }
         } catch (IllegalArgumentException e) {
             log.error("Failed to update board: {}", e.getMessage());
             return "redirect:/board/" + id;
@@ -338,6 +377,7 @@ public class BoardController {
         }
 
         try {
+            boardAttachmentService.deleteByBoardId(id);
             boardService.deleteBoard(id, currentUser);
         } catch (IllegalArgumentException e) {
             log.error("Failed to delete board: {}", e.getMessage());
@@ -431,5 +471,37 @@ public class BoardController {
         response.put("likeCount", board != null ? board.getLikeCount() : 0);
 
         return ResponseEntity.ok(response);
+    }
+
+    // 첨부파일 다운로드
+    @GetMapping("/attachments/{id}/download")
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id, HttpSession session) {
+        User currentUser = (User) session.getAttribute("currentUser");
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        BoardAttachment attachment = boardAttachmentService.getById(id);
+        if (attachment == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource = boardAttachmentService.getAttachmentFile(id);
+        if (resource == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String encodedFilename;
+        try {
+            encodedFilename = URLEncoder.encode(attachment.getOriginalName(), "UTF-8").replace("+", "%20");
+        } catch (UnsupportedEncodingException e) {
+            encodedFilename = attachment.getStoredName();
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
+                .body(resource);
     }
 }

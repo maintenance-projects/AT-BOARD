@@ -2,7 +2,9 @@ package kr.co.ultari.at_board.controller;
 
 import kr.co.ultari.at_board.model.primary.Admin;
 import kr.co.ultari.at_board.model.primary.Board;
+import kr.co.ultari.at_board.model.primary.BoardAttachment;
 import kr.co.ultari.at_board.model.primary.BoardCategory;
+import kr.co.ultari.at_board.service.BoardAttachmentService;
 import kr.co.ultari.at_board.service.BoardCategoryService;
 import kr.co.ultari.at_board.service.BoardService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class AdminBoardController {
 
     private final BoardService boardService;
     private final BoardCategoryService boardCategoryService;
+    private final BoardAttachmentService boardAttachmentService;
 
     private static final int PAGE_SIZE = 20;
 
@@ -71,8 +74,11 @@ public class AdminBoardController {
             return "redirect:/admin/boards";
         }
 
+        List<BoardAttachment> attachments = boardAttachmentService.getByBoardId(id);
+
         model.addAttribute("admin", admin);
         model.addAttribute("board", board);
+        model.addAttribute("attachments", attachments);
         model.addAttribute("backCategoryId", categoryId);
         model.addAttribute("backSearchType", searchType);
         model.addAttribute("backKeyword", keyword);
@@ -102,6 +108,7 @@ public class AdminBoardController {
     public String write(@RequestParam String title,
                         @RequestParam String content,
                         @RequestParam Long categoryId,
+                        @RequestParam(required = false) List<Long> attachmentIds,
                         HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
         if (admin == null) {
@@ -124,7 +131,11 @@ public class AdminBoardController {
                 .viewCount(0)
                 .build();
 
-        boardService.createBoardByAdmin(board);
+        Board savedBoard = boardService.createBoardByAdmin(board);
+
+        if (attachmentIds != null && !attachmentIds.isEmpty()) {
+            boardAttachmentService.assignToBoard(attachmentIds, savedBoard.getId());
+        }
 
         log.info("Admin {} created board: {}", admin.getAdminId(), title);
 
@@ -140,6 +151,7 @@ public class AdminBoardController {
 
         Board board = boardService.getBoardByIdNoCount(id);
         if (board != null) {
+            boardAttachmentService.deleteByBoardId(id);
             boardService.deleteBoardByAdmin(id);
             log.info("Admin {} deleted board: {}", admin.getAdminId(), board.getTitle());
         }
