@@ -48,6 +48,7 @@ public class AdminSettingController {
         model.addAttribute("maxSizeMb", maxSizeBytes / (1024 * 1024));
         model.addAttribute("multipartMaxSizeMb", getMultipartMaxSizeMb());
         model.addAttribute("blockedExtensions", appSettingService.getBlockedExtensions());
+        model.addAttribute("retentionRules", appSettingService.getRetentionRules());
         return "pages/admin/settings";
     }
 
@@ -106,6 +107,42 @@ public class AdminSettingController {
         appSettingService.removeBlockedExtension(cleaned);
         log.info("Admin {} removed blocked extension: {}", admin.getAdminId(), cleaned);
         ra.addFlashAttribute("success", "." + cleaned + " 확장자가 차단 목록에서 제거되었습니다.");
+        return "redirect:/admin/settings";
+    }
+
+    @PostMapping("/retention-rules/add")
+    public String addRetentionRule(@RequestParam int sizeThresholdMb,
+                                   @RequestParam int retentionDays,
+                                   RedirectAttributes ra,
+                                   HttpSession session) {
+        Admin admin = (Admin) session.getAttribute("adminUser");
+        if (admin == null) return "redirect:/admin/login";
+
+        if (sizeThresholdMb < 0) {
+            ra.addFlashAttribute("error", "파일 크기 기준은 0 이상이어야 합니다.");
+            return "redirect:/admin/settings";
+        }
+        if (retentionDays < 1) {
+            ra.addFlashAttribute("error", "보관 기간은 1일 이상이어야 합니다.");
+            return "redirect:/admin/settings";
+        }
+
+        appSettingService.addRetentionRule(sizeThresholdMb, retentionDays);
+        log.info("Admin {} added retention rule: {}MB 이상 → {}일", admin.getAdminId(), sizeThresholdMb, retentionDays);
+        ra.addFlashAttribute("success", sizeThresholdMb + "MB 이상 파일 보관 기간이 " + retentionDays + "일로 설정되었습니다.");
+        return "redirect:/admin/settings";
+    }
+
+    @PostMapping("/retention-rules/remove")
+    public String removeRetentionRule(@RequestParam int sizeThresholdMb,
+                                      RedirectAttributes ra,
+                                      HttpSession session) {
+        Admin admin = (Admin) session.getAttribute("adminUser");
+        if (admin == null) return "redirect:/admin/login";
+
+        appSettingService.removeRetentionRule(sizeThresholdMb);
+        log.info("Admin {} removed retention rule for {}MB", admin.getAdminId(), sizeThresholdMb);
+        ra.addFlashAttribute("success", "보관 기간 규칙이 삭제되었습니다.");
         return "redirect:/admin/settings";
     }
 }

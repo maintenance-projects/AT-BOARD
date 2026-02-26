@@ -37,6 +37,10 @@ public interface BoardCategoryRepository extends JpaRepository<BoardCategory, Lo
     @Query("SELECT c FROM BoardCategory c WHERE c.isActive = true")
     List<BoardCategory> findByIsActiveTrue();
 
+    // 스케줄러 동기화용: 카테고리에 등록된 모든 deptId 목록 (1회 쿼리로 N+1 방지)
+    @Query("SELECT d FROM BoardCategory c JOIN c.deptIds d")
+    List<String> findAllExistingDeptIds();
+
     // 어드민: 전체 페이징
     Page<BoardCategory> findAllByOrderByIdDesc(Pageable pageable);
 

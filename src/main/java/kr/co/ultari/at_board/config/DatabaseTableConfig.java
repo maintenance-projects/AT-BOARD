@@ -19,6 +19,7 @@ public class DatabaseTableConfig {
         private String userName = "USER_NAME";
         private String posName = "POS_NAME";
         private String deptId = "DEPT_ID";
+        private String userOrder = "";
     }
 
     @Data
@@ -27,5 +28,6 @@ public class DatabaseTableConfig {
         private String deptId = "DEPT_ID";
         private String deptName = "DEPT_NAME";
         private String parentDept = "PARENT_DEPT";
+        private String deptOrder = "";
     }
 }

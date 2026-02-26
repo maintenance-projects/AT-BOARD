@@ -1,6 +1,7 @@
 package kr.co.ultari.at_board.controller;
 
 import kr.co.ultari.at_board.model.primary.BoardAttachment;
+import kr.co.ultari.at_board.service.AppSettingService;
 import kr.co.ultari.at_board.service.BoardAttachmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ import java.util.UUID;
 public class FileController {
 
     private final BoardAttachmentService boardAttachmentService;
+    private final AppSettingService appSettingService;
 
     @Value("${file.upload.path:uploads}")
     private String uploadPath;
@@ -165,15 +167,21 @@ public class FileController {
 
         try {
             boolean isAdmin = session.getAttribute("adminUser") != null;
+            // calculateExpiresAt은 트랜잭션 밖(uploadAttachment 트랜잭션 시작 전)에서 호출
+            // → 두 트랜잭션이 커넥션을 동시에 점유하지 않고 순차 사용 (커넥션 풀 안전)
+            LocalDateTime expiresAt = isAdmin ? null : appSettingService.calculateExpiresAt(file.getSize());
             BoardAttachment attachment = isAdmin
                     ? boardAttachmentService.uploadAttachmentAdmin(file)
-                    : boardAttachmentService.uploadAttachment(file);
+                    : boardAttachmentService.uploadAttachment(file, expiresAt);
             response.put("id", attachment.getId());
             response.put("originalName", attachment.getOriginalName());
             response.put("fileSize", attachment.getFileSize());
             response.put("fileSizeDisplay", attachment.getFileSizeDisplay());
             response.put("mimeType", attachment.getMimeType());
-            log.info("Attachment uploaded: {} ({}) isAdmin={}", attachment.getOriginalName(), attachment.getId(), isAdmin);
+            if (attachment.getExpiresAt() != null) {
+                response.put("expiresAt", attachment.getExpiresAt().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            }
+            log.info("Attachment uploaded: {} ({}) isAdmin={} expiresAt={}", attachment.getOriginalName(), attachment.getId(), isAdmin, attachment.getExpiresAt());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             Map<String, Object> error = new HashMap<>();

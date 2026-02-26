@@ -68,12 +68,24 @@
                     <div class="attachment-download-section" th:if="${attachments != null && !attachments.isEmpty()}">
                         <h4 class="attachment-download-section__title">첨부파일 <span th:text="${attachments.size()}">0</span>개</h4>
                         <ul class="attachment-download-list">
-                            <li th:each="attachment : ${attachments}" class="attachment-download-item">
+                            <li th:each="attachment : ${attachments}"
+                                th:class="${attachment.isExpired()} ? 'attachment-download-item attachment-download-item--expired' : 'attachment-download-item'">
                                 <span class="attachment-download-item__icon">📎</span>
-                                <a th:href="@{/board/attachments/{id}/download(id=${attachment.id})}"
+                                <!-- 만료 전 -->
+                                <a th:unless="${attachment.isExpired()}"
+                                   th:href="@{/board/attachments/{id}/download(id=${attachment.id})}"
                                    class="attachment-download-item__name"
                                    th:text="${attachment.originalName}">파일명</a>
-                                <span class="attachment-download-item__size" th:text="${attachment.fileSizeDisplay}">크기</span>
+                                <!-- 만료 후 (파일 삭제됨) -->
+                                <span th:if="${attachment.isExpired()}"
+                                      class="attachment-download-item__name attachment-download-item__name--expired"
+                                      th:text="${attachment.originalName}">파일명</span>
+                                <span th:if="${attachment.isExpired()}" class="attachment-expired-badge">다운로드 기간 만료</span>
+                                <th:block th:unless="${attachment.isExpired()}">
+                                    <span class="attachment-download-item__size" th:text="${attachment.fileSizeDisplay}">크기</span>
+                                    <span th:if="${attachment.expiresAt != null}" class="attachment-expiry-info"
+                                          th:text="'~' + ${#temporals.format(attachment.expiresAt, 'yyyy-MM-dd')}">~2025-12-31</span>
+                                </th:block>
                             </li>
                         </ul>
                     </div>

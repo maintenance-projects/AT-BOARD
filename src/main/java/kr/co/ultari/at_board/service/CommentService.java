@@ -10,10 +10,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +37,24 @@ public class CommentService {
 
     @Transactional(value = "primaryTransactionManager", readOnly = true)
     public List<Comment> getCommentsByBoard(Board board) {
-        // 루트 댓글만 조회 후 각 댓글의 답댓글을 populate
-        List<Comment> rootComments = commentRepository.findByBoardAndParentIdIsNullOrderByCreatedAtAsc(board);
-        for (Comment comment : rootComments) {
-            List<Comment> replies = commentRepository.findByParentIdOrderByCreatedAtAsc(comment.getId());
-            comment.setReplies(replies);
+        // 1회 쿼리로 모든 댓글 조회 후 인-메모리에서 트리 구성 (N+1 방지)
+        List<Comment> allComments = commentRepository.findByBoardOrderByCreatedAtAsc(board);
+        Map<Long, Comment> commentMap = new LinkedHashMap<>();
+        List<Comment> rootComments = new ArrayList<>();
+        for (Comment comment : allComments) {
+            comment.setReplies(new ArrayList<>());
+            commentMap.put(comment.getId(), comment);
+            if (comment.getParentId() == null) {
+                rootComments.add(comment);
+            }
+        }
+        for (Comment comment : allComments) {
+            if (comment.getParentId() != null) {
+                Comment parent = commentMap.get(comment.getParentId());
+                if (parent != null) {
+                    parent.getReplies().add(comment);
+                }
+            }
         }
         return rootComments;
     }
@@ -57,9 +75,8 @@ public class CommentService {
 
         Comment savedComment = commentRepository.save(comment);
 
-        // 게시물의 댓글 수 업데이트 (답댓글 포함)
-        board.setCommentCount(board.getCommentCount() + 1);
-        boardRepository.save(board);
+        // 댓글 수 원자적 증가 (read-modify-save 경쟁 조건 방지)
+        boardRepository.incrementCommentCount(board.getId());
 
         return savedComment;
     }
@@ -92,20 +109,19 @@ public class CommentService {
 
             Board board = comment.getBoard();
 
-            // 루트 댓글이면 답댓글도 함께 삭제
+            // 루트 댓글이면 답댓글도 벌크 삭제 (N+1 방지)
             int deleteCount = 1;
             if (comment.getParentId() == null) {
-                List<Comment> replies = commentRepository.findByParentIdOrderByCreatedAtAsc(commentId);
-                deleteCount += replies.size();
-                for (Comment reply : replies) {
-                    commentRepository.deleteById(reply.getId());
+                int replyCount = (int) commentRepository.countByParentId(commentId);
+                if (replyCount > 0) {
+                    commentRepository.deleteByParentId(commentId);
+                    deleteCount += replyCount;
                 }
             }
             commentRepository.deleteById(commentId);
 
-            // 게시물의 댓글 수 업데이트
-            board.setCommentCount(Math.max(0, board.getCommentCount() - deleteCount));
-            boardRepository.save(board);
+            // 댓글 수 원자적 감소 (read-modify-save 경쟁 조건 방지)
+            boardRepository.decrementCommentCount(board.getId(), deleteCount);
 
             return true;
         }
@@ -118,20 +134,19 @@ public class CommentService {
         if (comment != null) {
             Board board = comment.getBoard();
 
-            // 루트 댓글이면 답댓글도 함께 삭제
+            // 루트 댓글이면 답댓글도 벌크 삭제 (N+1 방지)
             int deleteCount = 1;
             if (comment.getParentId() == null) {
-                List<Comment> replies = commentRepository.findByParentIdOrderByCreatedAtAsc(commentId);
-                deleteCount += replies.size();
-                for (Comment reply : replies) {
-                    commentRepository.deleteById(reply.getId());
+                int replyCount = (int) commentRepository.countByParentId(commentId);
+                if (replyCount > 0) {
+                    commentRepository.deleteByParentId(commentId);
+                    deleteCount += replyCount;
                 }
             }
             commentRepository.deleteById(commentId);
 
-            // 게시물의 댓글 수 업데이트
-            board.setCommentCount(Math.max(0, board.getCommentCount() - deleteCount));
-            boardRepository.save(board);
+            // 댓글 수 원자적 감소 (read-modify-save 경쟁 조건 방지)
+            boardRepository.decrementCommentCount(board.getId(), deleteCount);
 
             return true;
         }

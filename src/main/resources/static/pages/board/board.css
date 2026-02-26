@@ -309,8 +309,8 @@
 
 .comment-item__header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 6px;
     margin-bottom: 8px;
 }
 
@@ -323,6 +323,7 @@
 .comment-item__date {
     font-size: 12px;
     color: var(--muted);
+    margin-left: auto;
 }
 
 .comment-item__content {
@@ -702,6 +703,24 @@
     flex-shrink: 0;
 }
 
+/* 게시글 목록 첨부파일 배지 */
+.board-item__attach-badge {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-left: 5px;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.ico--attach {
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E") center / contain no-repeat;
+    background: currentColor;
+    width: 14px;
+    height: 14px;
+}
+
 /* 이미지 뷰어 (라이트박스) */
 .img-viewer {
     position: fixed;
@@ -760,11 +779,14 @@
     padding: 52px 60px 12px;
     box-sizing: border-box;
     overflow: hidden;
+    min-height: 0;
 }
 
 .img-viewer__main-img {
-    max-width: 100%;
-    max-height: 100%;
+    max-width: calc(100vw - 140px);
+    max-height: calc(100vh - 160px);
+    width: auto;
+    height: auto;
     object-fit: contain;
     border-radius: 4px;
     box-shadow: 0 4px 32px rgba(0, 0, 0, 0.6);
@@ -1173,6 +1195,59 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+.board-sidebar__avatar-letter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+.board-sidebar__avatar-img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: none;
+}
+
+/* 게시판 목록/상세/댓글 미니 프로필 아바타 */
+.profile-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    vertical-align: middle;
+}
+.profile-avatar--md {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+}
+.profile-avatar__letter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+.profile-avatar__img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: none;
 }
 
 .board-sidebar__user-info {
@@ -1344,6 +1419,7 @@
 
 /* 검색 패널 (아코디언) */
 .search-panel {
+    position: relative;
     overflow: hidden;
     max-height: 0;
     transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
@@ -1584,6 +1660,33 @@
     font-style: italic;
 }
 
+/* 첨부파일 업로드 진행바 */
+.attachment-item__progress {
+    display: none;
+    flex: 1;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.attachment-item__progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--primary, #3b82f6);
+    border-radius: 3px;
+    transition: width 0.15s ease;
+}
+
+.attachment-item__pct {
+    display: none;
+    font-size: 11px;
+    color: var(--text-muted, #94a3b8);
+    min-width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
 .attachment-item__name {
     flex: 1;
     overflow: hidden;
@@ -1675,4 +1778,31 @@
     flex-shrink: 0;
     font-size: 12px;
     color: var(--text-muted, #94a3b8);
+}
+
+.attachment-download-item__name--expired {
+    color: #94a3b8;
+    text-decoration: line-through;
+    cursor: default;
+}
+
+.attachment-download-item__name--expired:hover {
+    text-decoration: line-through;
+}
+
+.attachment-expired-badge {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #ef4444;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+.attachment-expiry-info {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-left: 4px;
 }

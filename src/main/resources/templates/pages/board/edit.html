@@ -61,6 +61,8 @@
                              th:data-id="${attachment.id}">
                             <span class="attachment-item__name" th:text="${attachment.originalName}">파일명</span>
                             <span class="attachment-item__size" th:text="${attachment.fileSizeDisplay}">크기</span>
+                            <span th:if="${attachment.expiresAt != null}" class="attachment-expiry-info"
+                                  th:text="'~' + ${#temporals.format(attachment.expiresAt, 'yyyy-MM-dd')}">~2025-12-31</span>
                             <button type="button" class="attachment-item__remove"
                                     th:onclick="'removeExisting(this,' + ${attachment.id} + ')'">×</button>
                             <input type="hidden" name="removedAttachmentIds"
@@ -204,83 +206,78 @@
                 quill.root.innerHTML = existingContent;
             }
 
-            // 이미지 업로드 핸들러
+            // data URL → File 매핑 (폼 제출 시 서버 업로드)
+            // Quill 1.x는 blob: URL을 보안상 차단하므로 FileReader로 data URL 사용
+            var pendingImages = []; // [{ dataUrl, file }]
+
+            // 이미지 핸들러: 선택 시 data URL로 즉시 미리보기, 서버 업로드는 폼 제출 시
             function imageHandler() {
-                const input = document.createElement('input');
+                var input = document.createElement('input');
                 input.setAttribute('type', 'file');
                 input.setAttribute('accept', 'image/*');
                 input.click();
 
-                input.onchange = async function() {
-                    const file = input.files[0];
+                input.onchange = function() {
+                    var file = input.files[0];
                     if (!file) return;
-
-                    // 파일 크기 체크 (10MB)
                     if (file.size > 10 * 1024 * 1024) {
                         alert('파일 크기는 10MB를 초과할 수 없습니다.');
                         return;
                     }
-
-                    // 이미지 타입 체크
                     if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) {
                         alert('JPG, PNG, GIF, WEBP 파일만 업로드 가능합니다.');
                         return;
                     }
-
-                    // FormData 생성
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    try {
-                        // 업로드 진행 표시
-                        const range = quill.getSelection(true);
-                        quill.insertText(range.index, '이미지 업로드 중...');
-                        quill.setSelection(range.index + 13);
-
-                        // 서버에 업로드
-                        const response = await fetch('/api/upload/image', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        const data = await response.json();
-
-                        if (response.ok && data.url) {
-                            // 업로드 성공: 임시 텍스트 삭제하고 이미지 삽입
-                            quill.deleteText(range.index, 13);
-                            quill.insertEmbed(range.index, 'image', data.url);
-                            quill.setSelection(range.index + 1);
-                        } else {
-                            // 업로드 실패
-                            quill.deleteText(range.index, 13);
-                            alert(data.error || '이미지 업로드에 실패했습니다.');
-                        }
-                    } catch (error) {
-                        console.error('Upload error:', error);
-                        alert('이미지 업로드 중 오류가 발생했습니다.');
-                    }
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var dataUrl = e.target.result;
+                        pendingImages.push({ dataUrl: dataUrl, file: file });
+                        var range = quill.getSelection(true);
+                        quill.insertEmbed(range.index, 'image', dataUrl);
+                        quill.setSelection(range.index + 1);
+                    };
+                    reader.readAsDataURL(file);
                 };
             }
 
-            // 폼 제출 시 에디터 내용을 textarea에 복사
-            document.getElementById('editForm').addEventListener('submit', function(e) {
-                const content = document.getElementById('content');
-                content.value = quill.root.innerHTML;
+            // 에디터 내 data URL 이미지를 서버에 업로드하고 URL 교체
+            function uploadPendingImages() {
+                var imgs = quill.root.querySelectorAll('img');
+                var toUpload = [];
+                imgs.forEach(function(img) {
+                    if (img.src.indexOf('data:') === 0) {
+                        var entry = null;
+                        for (var i = 0; i < pendingImages.length; i++) {
+                            if (pendingImages[i].dataUrl === img.src) { entry = pendingImages[i]; break; }
+                        }
+                        if (entry) toUpload.push({ img: img, file: entry.file, dataUrl: entry.dataUrl });
+                    }
+                });
+                if (toUpload.length === 0) return Promise.resolve();
 
-                // 내용이 비어있는지 확인
-                if (quill.getText().trim().length === 0) {
-                    e.preventDefault();
-                    alert('내용을 입력하세요.');
-                    return false;
-                }
-            });
-
-            function submitForm() {
-                document.getElementById('editForm').querySelector('[type="submit"]').click();
+                var promise = Promise.resolve();
+                toUpload.forEach(function(item) {
+                    promise = promise.then(function() {
+                        var formData = new FormData();
+                        formData.append('file', item.file);
+                        return fetch('/api/upload/image', { method: 'POST', body: formData })
+                            .then(function(res) { return res.json(); })
+                            .then(function(data) {
+                                if (data.url) {
+                                    item.img.setAttribute('src', data.url);
+                                    pendingImages = pendingImages.filter(function(p) { return p.dataUrl !== item.dataUrl; });
+                                } else {
+                                    throw new Error(data.error || '이미지 업로드 실패');
+                                }
+                            });
+                    });
+                });
+                return promise;
             }
+
         </script>
 
-        <!-- 첨부파일 스크립트 -->
+        <!-- 첨부파일 + 폼 제출 스크립트 -->
         <script th:inline="javascript">
             var blockedExtensions = (/*[[${blockedExtensionsStr}]]*/ 'exe,sh,bat').split(',').map(function(e) { return e.trim(); });
 
@@ -289,8 +286,6 @@
                 var hidden = document.getElementById('remove-hidden-' + attachmentId);
                 if (hidden) {
                     hidden.removeAttribute('disabled');
-                    // item을 제거하기 전에 hidden input을 form으로 이동시켜야
-                    // DOM 제거 후에도 폼 제출 시 값이 전송됨
                     document.getElementById('editForm').appendChild(hidden);
                 }
                 if (item) item.remove();
@@ -299,11 +294,30 @@
             (function() {
                 var maxSizeMb = /*[[${maxAttachmentSizeMb}]]*/ 50;
                 var maxSizeBytes = maxSizeMb * 1024 * 1024;
-                var _blockedExtensions = blockedExtensions;
+                var retentionRules = /*[[${retentionRules}]]*/ [];
+
+                function calcExpiresAt(fileSizeBytes) {
+                    var fileSizeMb = Math.floor(fileSizeBytes / (1024 * 1024));
+                    var applicable = null;
+                    for (var i = 0; i < retentionRules.length; i++) {
+                        var rule = retentionRules[i];
+                        if (fileSizeMb >= rule.sizeThresholdMb) {
+                            if (applicable === null || rule.sizeThresholdMb > applicable.sizeThresholdMb) {
+                                applicable = rule;
+                            }
+                        }
+                    }
+                    if (!applicable || applicable.retentionDays <= 0) return null;
+                    var d = new Date();
+                    d.setDate(d.getDate() + applicable.retentionDays);
+                    return d.toISOString().slice(0, 10);
+                }
 
                 var zone = document.getElementById('attachmentZone');
                 var input = document.getElementById('attachmentInput');
                 var list = document.getElementById('attachmentList');
+                var form = document.getElementById('editForm');
+                var pendingFiles = [];
 
                 zone.addEventListener('click', function() { input.click(); });
                 input.addEventListener('change', function() { handleFiles(input.files); input.value = ''; });
@@ -322,14 +336,20 @@
                 });
 
                 function handleFiles(files) {
-                    Array.from(files).forEach(function(file) { uploadFile(file); });
+                    Array.from(files).forEach(function(file) { addPendingFile(file); });
                 }
 
-                function uploadFile(file) {
+                function formatFileSize(bytes) {
+                    if (bytes < 1024) return bytes + ' B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+                }
+
+                function addPendingFile(file) {
                     var dotIdx = file.name.lastIndexOf('.');
                     if (dotIdx >= 0) {
                         var ext = file.name.substring(dotIdx + 1).toLowerCase();
-                        if (_blockedExtensions.indexOf(ext) >= 0) {
+                        if (blockedExtensions.indexOf(ext) >= 0) {
                             alert('업로드할 수 없는 파일 형식입니다: .' + ext);
                             return;
                         }
@@ -338,54 +358,171 @@
                         alert('파일 크기는 ' + maxSizeMb + 'MB를 초과할 수 없습니다.\n(선택 파일: ' + (file.size / 1024 / 1024).toFixed(1) + 'MB)');
                         return;
                     }
-                    var formData = new FormData();
-                    formData.append('file', file);
 
                     var item = document.createElement('div');
-                    item.className = 'attachment-item attachment-item--uploading';
-                    item.textContent = file.name + ' (업로드 중...)';
+                    item.className = 'attachment-item';
+
+                    var nameSpan = document.createElement('span');
+                    nameSpan.className = 'attachment-item__name';
+                    nameSpan.textContent = file.name;
+
+                    var sizeSpan = document.createElement('span');
+                    sizeSpan.className = 'attachment-item__size';
+                    sizeSpan.textContent = formatFileSize(file.size);
+
+                    var progressDiv = document.createElement('div');
+                    progressDiv.className = 'attachment-item__progress';
+                    var progressBar = document.createElement('div');
+                    progressBar.className = 'attachment-item__progress-bar';
+                    progressDiv.appendChild(progressBar);
+
+                    var pctSpan = document.createElement('span');
+                    pctSpan.className = 'attachment-item__pct';
+
+                    var removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'attachment-item__remove';
+                    removeBtn.textContent = '×';
+                    removeBtn.addEventListener('click', function() {
+                        pendingFiles = pendingFiles.filter(function(pf) { return pf.item !== item; });
+                        item.remove();
+                    });
+
+                    item.appendChild(nameSpan);
+                    item.appendChild(sizeSpan);
+                    var expiresAt = calcExpiresAt(file.size);
+                    if (expiresAt) {
+                        var expirySpan = document.createElement('span');
+                        expirySpan.className = 'attachment-expiry-info';
+                        expirySpan.textContent = '~' + expiresAt;
+                        item.appendChild(expirySpan);
+                    }
+                    item.appendChild(progressDiv);
+                    item.appendChild(pctSpan);
+                    item.appendChild(removeBtn);
                     list.appendChild(item);
 
-                    fetch('/api/upload/attachment', { method: 'POST', body: formData })
-                        .then(function(r) { return r.json(); })
-                        .then(function(data) {
-                            if (data.error) {
-                                item.remove();
-                                alert(data.error);
-                                return;
-                            }
-                            item.className = 'attachment-item';
-                            item.innerHTML = '';
-
-                            var nameSpan = document.createElement('span');
-                            nameSpan.className = 'attachment-item__name';
-                            nameSpan.textContent = data.originalName;
-
-                            var sizeSpan = document.createElement('span');
-                            sizeSpan.className = 'attachment-item__size';
-                            sizeSpan.textContent = data.fileSizeDisplay;
-
-                            var removeBtn = document.createElement('button');
-                            removeBtn.type = 'button';
-                            removeBtn.className = 'attachment-item__remove';
-                            removeBtn.textContent = '×';
-                            removeBtn.addEventListener('click', function() { item.remove(); });
-
-                            var hiddenInput = document.createElement('input');
-                            hiddenInput.type = 'hidden';
-                            hiddenInput.name = 'attachmentIds';
-                            hiddenInput.value = data.id;
-
-                            item.appendChild(nameSpan);
-                            item.appendChild(sizeSpan);
-                            item.appendChild(removeBtn);
-                            item.appendChild(hiddenInput);
-                        })
-                        .catch(function() {
-                            item.remove();
-                            alert('파일 업로드 중 오류가 발생했습니다.');
-                        });
+                    pendingFiles.push({ file: file, item: item, nameSpan: nameSpan, sizeSpan: sizeSpan, progressDiv: progressDiv, progressBar: progressBar, pctSpan: pctSpan, removeBtn: removeBtn });
                 }
+
+                function uploadWithProgress(pf) {
+                    return new Promise(function(resolve, reject) {
+                        var xhr = new XMLHttpRequest();
+                        var formData = new FormData();
+                        formData.append('file', pf.file);
+
+                        pf.nameSpan.style.flex = '0 0 auto';
+                        pf.nameSpan.style.maxWidth = '50%';
+                        pf.sizeSpan.style.display = 'none';
+                        pf.progressDiv.style.display = 'flex';
+                        pf.pctSpan.style.display = 'inline';
+                        pf.removeBtn.style.display = 'none';
+                        pf.progressBar.style.width = '0%';
+                        pf.pctSpan.textContent = '0%';
+
+                        xhr.upload.addEventListener('progress', function(e) {
+                            if (e.lengthComputable) {
+                                var pct = Math.round(e.loaded / e.total * 100);
+                                pf.progressBar.style.width = pct + '%';
+                                pf.pctSpan.textContent = pct + '%';
+                            }
+                        });
+
+                        xhr.addEventListener('load', function() {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                try {
+                                    var data = JSON.parse(xhr.responseText);
+                                    if (data.error) { reject(data.error); return; }
+                                    pf.progressBar.style.width = '100%';
+                                    pf.pctSpan.textContent = '100%';
+                                    resolve(data);
+                                } catch(ex) { reject('서버 응답 오류'); }
+                            } else {
+                                try { reject(JSON.parse(xhr.responseText).error || '업로드 실패'); }
+                                catch(ex) { reject('업로드 실패 (' + xhr.status + ')'); }
+                            }
+                        });
+
+                        xhr.addEventListener('error', function() { reject('네트워크 오류'); });
+                        xhr.open('POST', '/api/upload/attachment');
+                        xhr.send(formData);
+                    });
+                }
+
+                function restoreItem(pf) {
+                    pf.nameSpan.style.flex = '';
+                    pf.nameSpan.style.maxWidth = '';
+                    pf.sizeSpan.style.display = '';
+                    pf.progressDiv.style.display = 'none';
+                    pf.pctSpan.style.display = 'none';
+                    pf.removeBtn.style.display = '';
+                }
+
+                // 폼 제출: Quill 검증 → 이미지 업로드 → 첨부파일 업로드 → 제출
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    var contentEl = document.getElementById('content');
+                    contentEl.value = quill.root.innerHTML;
+                    if (quill.getText().trim().length === 0) {
+                        alert('내용을 입력하세요.');
+                        return;
+                    }
+
+                    var submitBtn = form.querySelector('[type="submit"]');
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '수정 중...';
+
+                    // 1단계: 에디터 이미지 서버 업로드 (blob URL → 서버 URL 교체)
+                    uploadPendingImages()
+                        .then(function() {
+                            contentEl.value = quill.root.innerHTML;
+
+                            // 2단계: 새 첨부파일 순차 업로드
+                            var snapshot = pendingFiles.slice();
+                            var attachmentIds = [];
+                            var idx = 0;
+
+                            function uploadNext() {
+                                if (idx >= snapshot.length) {
+                                    attachmentIds.forEach(function(id) {
+                                        var hidden = document.createElement('input');
+                                        hidden.type = 'hidden';
+                                        hidden.name = 'attachmentIds';
+                                        hidden.value = id;
+                                        form.appendChild(hidden);
+                                    });
+                                    form.submit();
+                                    return;
+                                }
+                                var pf = snapshot[idx++];
+                                uploadWithProgress(pf)
+                                    .then(function(data) {
+                                        attachmentIds.push(data.id);
+                                        pf.nameSpan.style.flex = '';
+                                        pf.nameSpan.style.maxWidth = '';
+                                        pf.sizeSpan.style.display = '';
+                                        pf.progressDiv.style.display = 'none';
+                                        pf.pctSpan.style.display = 'none';
+                                        pf.removeBtn.style.display = '';
+                                        uploadNext();
+                                    })
+                                    .catch(function(err) {
+                                        alert(pf.file.name + ' 업로드 실패: ' + err);
+                                        restoreItem(pf);
+                                        submitBtn.disabled = false;
+                                        submitBtn.textContent = '수정';
+                                    });
+                            }
+
+                            uploadNext();
+                        })
+                        .catch(function(err) {
+                            alert('이미지 업로드 실패: ' + err);
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = '수정';
+                        });
+                });
             })();
         </script>
     </th:block>

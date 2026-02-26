@@ -4,9 +4,13 @@ import kr.co.ultari.at_board.model.secondary.Dept;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface DepartmentRepository extends JpaRepository<Dept, String> {
     Optional<Dept> findByDeptId(String deptId);
+
+    List<Dept> findByDeptIdIn(Collection<String> deptIds);
 }

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="commentsList" class="comments-section">
+    <h3 class="comments-section__title">
+        댓글 <span class="comment-count" th:text="${board.commentCount}">0</span>
+    </h3>
+
+    <!-- 댓글 작성 폼 -->
+    <form th:action="@{/board/{id}/comments(id=${board.id})}" method="post" class="comment-form">
+        <textarea
+            name="content"
+            class="comment-form__input"
+            placeholder="댓글을 입력하세요"
+            required
+            maxlength="1000"
+            rows="3"></textarea>
+        <button type="submit" class="comment-form__submit">등록</button>
+    </form>
+
+    <!-- 댓글 목록 -->
+    <div class="comments-list">
+        <div th:if="${comments.isEmpty()}" class="comments-empty">
+            첫 댓글을 작성해보세요.
+        </div>
+
+        <div th:each="comment : ${comments}" class="comment-item">
+            <div class="comment-item__header">
+                <span class="profile-avatar"
+                      th:attr="data-photo-url=${profilePhotoUrlPattern != null && !#strings.isEmpty(profilePhotoUrlPattern) ? #strings.replace(profilePhotoUrlPattern, '{userId}', comment.userId) : ''}">
+                    <span class="profile-avatar__letter" th:text="${#strings.substring(comment.authorName, 0, 1)}">홍</span>
+                    <img class="profile-avatar__img" alt="" />
+                </span>
+                <span class="comment-item__author" th:text="${comment.authorDisplayName}">작성자</span>
+                <time class="comment-item__date" th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
+            </div>
+            <p th:id="'comment-text-' + ${comment.id}" class="comment-item__content" th:text="${comment.content}">댓글 내용</p>
+            <!-- 인라인 수정 폼 (기본 숨김) -->
+            <div th:if="${currentUser != null && comment.userId == currentUser.userId}"
+                 th:id="'comment-edit-' + ${comment.id}" class="comment-edit" style="display:none;">
+                <form th:action="@{/board/comments/{id}/edit(id=${comment.id})}" method="post" class="comment-edit__form">
+                    <input type="hidden" name="boardId" th:value="${board.id}" />
+                    <textarea name="content" class="comment-form__input comment-edit__textarea"
+                              rows="3" maxlength="1000" th:text="${comment.content}"></textarea>
+                    <div class="comment-edit__actions">
+                        <button type="button" class="comment-item__cancel-btn"
+                                th:onclick="'cancelEdit(' + ${comment.id} + ')'">취소</button>
+                        <button type="submit" class="comment-form__submit">저장</button>
+                    </div>
+                </form>
+            </div>
+            <div class="comment-item__footer">
+                <button type="button" class="comment-item__reply-btn"
+                        th:data-reply-target="${comment.id}"
+                        th:onclick="'toggleReply(' + ${comment.id} + ')'">
+                    <th:block th:if="${!comment.replies.isEmpty()}">답글 <span th:text="${comment.replies.size()}">0</span></th:block>
+                    <th:block th:if="${comment.replies.isEmpty()}">답글</th:block>
+                </button>
+                <th:block th:if="${currentUser != null && comment.userId == currentUser.userId}">
+                    <button type="button" class="comment-item__edit-btn"
+                            th:onclick="'startEdit(' + ${comment.id} + ')'">수정</button>
+                    <form th:action="@{/board/comments/{commentId}/delete(commentId=${comment.id})}" method="post"
+                          style="display: inline;" class="comment-delete-form">
+                        <input type="hidden" name="boardId" th:value="${board.id}" />
+                        <button type="submit" class="comment-item__delete">삭제</button>
+                    </form>
+                </th:block>
+            </div>
+
+            <!-- 답댓글 아코디언 영역 -->
+            <div th:id="'reply-area-' + ${comment.id}" class="reply-area">
+                <!-- 답댓글 목록 -->
+                <div th:if="${!comment.replies.isEmpty()}" class="reply-list">
+                    <div th:each="reply : ${comment.replies}" class="comment-item comment-item--reply">
+                        <div class="comment-item__header">
+                            <span class="profile-avatar"
+                                  th:attr="data-photo-url=${profilePhotoUrlPattern != null && !#strings.isEmpty(profilePhotoUrlPattern) ? #strings.replace(profilePhotoUrlPattern, '{userId}', reply.userId) : ''}">
+                                <span class="profile-avatar__letter" th:text="${#strings.substring(reply.authorName, 0, 1)}">홍</span>
+                                <img class="profile-avatar__img" alt="" />
+                            </span>
+                            <span class="comment-item__author" th:text="${reply.authorDisplayName}">작성자</span>
+                            <time class="comment-item__date" th:text="${#temporals.format(reply.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
+                        </div>
+                        <p th:id="'comment-text-' + ${reply.id}" class="comment-item__content" th:text="${reply.content}">답댓글 내용</p>
+                        <!-- 인라인 수정 폼 (기본 숨김) -->
+                        <div th:if="${currentUser != null && reply.userId == currentUser.userId}"
+                             th:id="'comment-edit-' + ${reply.id}" class="comment-edit" style="display:none;">
+                            <form th:action="@{/board/comments/{id}/edit(id=${reply.id})}" method="post" class="comment-edit__form">
+                                <input type="hidden" name="boardId" th:value="${board.id}" />
+                                <textarea name="content" class="comment-form__input comment-edit__textarea"
+                                          rows="2" maxlength="1000" th:text="${reply.content}"></textarea>
+                                <div class="comment-edit__actions">
+                                    <button type="button" class="comment-item__cancel-btn"
+                                            th:onclick="'cancelEdit(' + ${reply.id} + ')'">취소</button>
+                                    <button type="submit" class="comment-form__submit">저장</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div th:if="${currentUser != null && reply.userId == currentUser.userId}" class="comment-item__footer">
+                            <button type="button" class="comment-item__edit-btn"
+                                    th:onclick="'startEdit(' + ${reply.id} + ')'">수정</button>
+                            <form th:action="@{/board/comments/{commentId}/delete(commentId=${reply.id})}" method="post"
+                                  style="display: inline;" class="comment-delete-form">
+                                <input type="hidden" name="boardId" th:value="${board.id}" />
+                                <button type="submit" class="comment-item__delete">삭제</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- 답댓글 작성 폼 -->
+                <form th:action="@{/board/{id}/comments(id=${board.id})}" method="post" class="comment-form comment-form--reply">
+                    <input type="hidden" name="parentId" th:value="${comment.id}" />
+                    <textarea
+                        name="content"
+                        class="comment-form__input"
+                        placeholder="답글을 입력하세요"
+                        required
+                        maxlength="1000"
+                        rows="2"></textarea>
+                    <button type="submit" class="comment-form__submit">등록</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

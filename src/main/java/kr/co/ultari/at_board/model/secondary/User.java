@@ -24,6 +24,8 @@ public class User {
 
     private String deptId;
 
+    private String userOrder;
+
     // DB에 저장하지 않고 로그인 시 부서 테이블에서 조회하여 채움
     @javax.persistence.Transient
     private String deptName;

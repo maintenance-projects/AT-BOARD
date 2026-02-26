@@ -9,8 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -76,6 +81,40 @@ public class DepartmentService {
             Dept dept = departmentRepository.findByDeptId(current).orElse(null);
             if (dept == null || dept.getParentDept() == null || dept.getParentDept().isEmpty()) break;
             current = dept.getParentDept();
+        }
+        return result;
+    }
+
+    /**
+     * [부서] 카테고리 정렬용 composite 키 반환 (deptId → "DDDDD_order").
+     * 트리 레벨(depth) 오름차순, 같은 레벨은 deptOrder 오름차순.
+     * findAll() 1회 쿼리로 depth 계산 + deptOrder 조회를 동시 처리.
+     */
+    public Map<String, String> getDeptCompositeSortKeyMap(Collection<String> deptIds) {
+        if (deptIds == null || deptIds.isEmpty()) return Collections.emptyMap();
+
+        List<Dept> allDepts = departmentRepository.findAll();
+        Map<String, String> parentMap = new HashMap<>();
+        Map<String, String> orderMap = new HashMap<>();
+        for (Dept d : allDepts) {
+            parentMap.put(d.getDeptId(), d.getParentDept());
+            String order = d.getDeptOrder();
+            orderMap.put(d.getDeptId(), (order != null && !order.isEmpty()) ? order : "999999");
+        }
+
+        Map<String, String> result = new HashMap<>();
+        for (String deptId : deptIds) {
+            int depth = 0;
+            String current = deptId;
+            Set<String> visited = new HashSet<>();
+            while (current != null && visited.add(current) && parentMap.containsKey(current)) {
+                String parent = parentMap.get(current);
+                if (parent == null || parent.isEmpty() || "0".equals(parent)) break;
+                depth++;
+                current = parent;
+            }
+            String order = orderMap.getOrDefault(deptId, "999999");
+            result.put(deptId, String.format("%05d_%s", depth, order));
         }
         return result;
     }

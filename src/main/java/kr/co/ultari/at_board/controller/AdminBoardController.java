@@ -18,6 +18,8 @@ import org.springframework.data.domain.PageRequest;
 
 import javax.servlet.http.HttpSession;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin/boards")
@@ -48,12 +50,16 @@ public class AdminBoardController {
 
         List<BoardCategory> categories = boardCategoryService.getAllCategories();
 
+        List<Long> boardIds = boards.getContent().stream().map(Board::getId).collect(Collectors.toList());
+        Set<Long> attachedBoardIds = boardAttachmentService.getBoardIdsWithAttachments(boardIds);
+
         model.addAttribute("admin", admin);
         model.addAttribute("boards", boards);
         model.addAttribute("categories", categories);
         model.addAttribute("categoryId", categoryId);
         model.addAttribute("searchType", searchType);
         model.addAttribute("keyword", keyword);
+        model.addAttribute("attachedBoardIds", attachedBoardIds);
 
         return "pages/admin/board/list";
     }

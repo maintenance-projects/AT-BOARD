@@ -28,6 +28,8 @@ import javax.servlet.http.HttpSession;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,12 +64,8 @@ public class BoardController {
             return "redirect:/board";
         }
 
-        // 사용자가 볼 수 있는 게시판 목록 (전사 가나다순 > 부서 가나다순)
-        List<BoardCategory> categories = boardCategoryService.getCompanyWideCategories();
-        categories.sort(Comparator.comparing(BoardCategory::getName));
-        List<BoardCategory> deptCategories = boardCategoryService.getDeptCategoriesForUser(currentUser.getDeptId());
-        deptCategories.sort(Comparator.comparing(BoardCategory::getName));
-        categories.addAll(deptCategories);
+        // 사용자가 볼 수 있는 게시판 목록: [전사](이름순) > [부서](deptOrder순) > 없음(이름순)
+        List<BoardCategory> categories = buildSortedCategories(currentUser);
 
         // 게시판이 없으면 에러
         if (categories.isEmpty()) {
@@ -106,6 +104,7 @@ public class BoardController {
         List<Long> boardIds = boardsPage.getContent().stream().map(Board::getId).collect(Collectors.toList());
         Set<Long> likedBoardIds = boardLikeService.getLikedBoardIds(boardIds, currentUser.getUserId());
         Set<Long> commentedBoardIds = commentService.getCommentedBoardIds(boardIds, currentUser.getUserId());
+        Set<Long> attachedBoardIds = boardAttachmentService.getBoardIdsWithAttachments(boardIds);
 
         model.addAttribute("boards", boardsPage);
         model.addAttribute("categories", categories);
@@ -116,6 +115,7 @@ public class BoardController {
         model.addAttribute("newPostsByCategory", newPostsByCategory);
         model.addAttribute("likedBoardIds", likedBoardIds);
         model.addAttribute("commentedBoardIds", commentedBoardIds);
+        model.addAttribute("attachedBoardIds", attachedBoardIds);
         return "pages/board/list";
     }
 
@@ -157,6 +157,7 @@ public class BoardController {
         List<Long> apiPageBoardIds = boardsPage.getContent().stream().map(Board::getId).collect(Collectors.toList());
         Set<Long> apiLikedIds = boardLikeService.getLikedBoardIds(apiPageBoardIds, currentUser.getUserId());
         Set<Long> apiCommentedIds = commentService.getCommentedBoardIds(apiPageBoardIds, currentUser.getUserId());
+        Set<Long> apiAttachedIds = boardAttachmentService.getBoardIdsWithAttachments(apiPageBoardIds);
 
         List<Map<String, Object>> boardDtos = boardsPage.getContent().stream().map(board -> {
             Map<String, Object> dto = new HashMap<>();
@@ -172,6 +173,7 @@ public class BoardController {
             dto.put("viewCount", board.getViewCount());
             dto.put("isLiked", apiLikedIds.contains(board.getId()));
             dto.put("isCommented", apiCommentedIds.contains(board.getId()));
+            dto.put("hasAttachment", apiAttachedIds.contains(board.getId()));
             return dto;
         }).collect(Collectors.toList());
 
@@ -201,7 +203,7 @@ public class BoardController {
         @SuppressWarnings("unchecked")
         Set<Long> viewedBoards = (Set<Long>) session.getAttribute("viewedBoards");
         if (viewedBoards == null) {
-            viewedBoards = new HashSet<>();
+            viewedBoards = Collections.synchronizedSet(new HashSet<>());
             session.setAttribute("viewedBoards", viewedBoards);
         }
 
@@ -250,12 +252,8 @@ public class BoardController {
             return "redirect:/board";
         }
 
-        // 사용자가 글을 작성할 수 있는 카테고리 목록 (adminOnly 제외, 전사 가나다순 > 부서 가나다순)
-        List<BoardCategory> categories = boardCategoryService.getCompanyWideCategories();
-        categories.sort(Comparator.comparing(BoardCategory::getName));
-        List<BoardCategory> deptCategories = boardCategoryService.getDeptCategoriesForUser(currentUser.getDeptId());
-        deptCategories.sort(Comparator.comparing(BoardCategory::getName));
-        categories.addAll(deptCategories);
+        // 사용자가 글을 작성할 수 있는 카테고리 목록 (adminOnly 제외): [전사](이름순) > [부서](deptOrder순) > 없음(이름순)
+        List<BoardCategory> categories = buildSortedCategories(currentUser);
 
         // adminOnly 게시판 제외
         categories.removeIf(cat -> cat.getAdminOnly() != null && cat.getAdminOnly());
@@ -265,6 +263,7 @@ public class BoardController {
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("maxAttachmentSizeMb", appSettingService.getMaxAttachmentSize() / (1024 * 1024));
         model.addAttribute("blockedExtensionsStr", String.join(",", appSettingService.getBlockedExtensions()));
+        model.addAttribute("retentionRules", appSettingService.getRetentionRules());
         return "pages/board/write";
     }
 
@@ -322,6 +321,7 @@ public class BoardController {
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("maxAttachmentSizeMb", appSettingService.getMaxAttachmentSize() / (1024 * 1024));
         model.addAttribute("blockedExtensionsStr", String.join(",", appSettingService.getBlockedExtensions()));
+        model.addAttribute("retentionRules", appSettingService.getRetentionRules());
         return "pages/board/edit";
     }
 
@@ -387,6 +387,26 @@ public class BoardController {
             return "redirect:/board?categoryId=" + boardCategoryId;
         }
         return "redirect:/board";
+    }
+
+    // 댓글 섹션 프래그먼트 (AJAX 새로고침용)
+    @GetMapping("/{boardId}/comments/fragment")
+    public String commentsFragment(@PathVariable Long boardId, Model model, HttpSession session) {
+        User currentUser = (User) session.getAttribute("currentUser");
+        if (currentUser == null) {
+            return "redirect:/board";
+        }
+
+        Board board = boardService.getBoardByIdNoCount(boardId);
+        if (board == null) {
+            return "redirect:/board";
+        }
+
+        List<Comment> comments = commentService.getCommentsByBoard(board);
+        model.addAttribute("board", board);
+        model.addAttribute("comments", comments);
+        model.addAttribute("currentUser", currentUser);
+        return "fragments/comments :: commentsList";
     }
 
     // 댓글 작성
@@ -476,14 +496,21 @@ public class BoardController {
     // 첨부파일 다운로드
     @GetMapping("/attachments/{id}/download")
     public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id, HttpSession session) {
-        User currentUser = (User) session.getAttribute("currentUser");
-        if (currentUser == null) {
+        boolean isLoggedIn = session.getAttribute("currentUser") != null
+                || session.getAttribute("adminUser") != null;
+        if (!isLoggedIn) {
             return ResponseEntity.status(401).build();
         }
 
         BoardAttachment attachment = boardAttachmentService.getById(id);
         if (attachment == null) {
             return ResponseEntity.notFound().build();
+        }
+
+        // 관리자는 만료된 파일도 다운로드 가능
+        boolean isAdmin = session.getAttribute("adminUser") != null;
+        if (!isAdmin && attachment.isExpired()) {
+            return ResponseEntity.status(410).build();
         }
 
         Resource resource = boardAttachmentService.getAttachmentFile(id);
@@ -503,5 +530,33 @@ public class BoardController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
                 .body(resource);
+    }
+
+    /**
+     * 사이드바 카테고리 정렬: [전사](이름순) > [부서](deptOrder순) > 없음(이름순)
+     */
+    private List<BoardCategory> buildSortedCategories(User currentUser) {
+        // [전사]: deptIds 비어있음, 이름순
+        List<BoardCategory> companyWide = boardCategoryService.getCompanyWideCategories();
+        companyWide.sort(Comparator.comparing(BoardCategory::getName));
+
+        // 부서 관련 (deptIds 있음): getDeptCategoriesForUser()가 deptOrder 순으로 반환
+        List<BoardCategory> deptCategories = boardCategoryService.getDeptCategoriesForUser(currentUser.getDeptId());
+
+        // [부서]: deptId != null (스케줄러 자동생성), deptOrder 순 유지
+        // 없음: deptId == null (관리자 수동생성+부서지정), 이름순
+        List<BoardCategory> schedulerDept = new ArrayList<>();
+        List<BoardCategory> adminDept = new ArrayList<>();
+        for (BoardCategory c : deptCategories) {
+            if (c.getDeptId() != null) schedulerDept.add(c);
+            else adminDept.add(c);
+        }
+        adminDept.sort(Comparator.comparing(BoardCategory::getName));
+
+        List<BoardCategory> result = new ArrayList<>();
+        result.addAll(companyWide);
+        result.addAll(schedulerDept);
+        result.addAll(adminDept);
+        return result;
     }
 }

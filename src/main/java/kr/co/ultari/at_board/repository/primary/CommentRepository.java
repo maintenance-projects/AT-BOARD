@@ -34,6 +34,19 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Query("SELECT DISTINCT c.board.id FROM Comment c WHERE c.userId = :userId AND c.board.id IN :boardIds")
     List<Long> findCommentedBoardIds(@Param("userId") String userId, @Param("boardIds") List<Long> boardIds);
 
+    // 답댓글 수 조회 (루트 댓글 삭제 시 감소량 계산)
+    long countByParentId(Long parentId);
+
+    // 루트 댓글의 답댓글 벌크 삭제 (N+1 방지)
+    @Modifying
+    @Query("DELETE FROM Comment c WHERE c.parentId = :parentId")
+    void deleteByParentId(@Param("parentId") Long parentId);
+
+    // 게시글 삭제 시 댓글 벌크 삭제 (FK 제약 조건 해소)
+    @Modifying
+    @Query("DELETE FROM Comment c WHERE c.board.id = :boardId")
+    void deleteByBoardId(@Param("boardId") Long boardId);
+
     // 카테고리 내 전체 댓글 벌크 삭제
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Comment c WHERE c.board IN (SELECT b FROM Board b WHERE b.category = :category)")

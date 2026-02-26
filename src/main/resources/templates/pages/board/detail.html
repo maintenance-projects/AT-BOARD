@@ -36,6 +36,11 @@
                 <header class="board-detail__header">
                     <h2 class="board-detail__title" th:text="${board.title}">제목</h2>
                     <div class="board-detail__meta">
+                        <span class="profile-avatar profile-avatar--md"
+                              th:attr="data-photo-url=${profilePhotoUrlPattern != null && !#strings.isEmpty(profilePhotoUrlPattern) ? #strings.replace(profilePhotoUrlPattern, '{userId}', board.userId) : ''}">
+                            <span class="profile-avatar__letter" th:text="${#strings.substring(board.authorNameOnly, 0, 1)}">홍</span>
+                            <img class="profile-avatar__img" alt="" />
+                        </span>
                         <span class="board-detail__author" th:text="${board.authorName}">작성자</span>
                         <span class="board-detail__dot">·</span>
                         <time class="board-detail__date" th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
@@ -54,12 +59,25 @@
                 <div class="attachment-download-section" th:if="${attachments != null && !attachments.isEmpty()}">
                     <h4 class="attachment-download-section__title">첨부파일 <span th:text="${attachments.size()}">0</span>개</h4>
                     <ul class="attachment-download-list">
-                        <li th:each="attachment : ${attachments}" class="attachment-download-item">
+                        <li th:each="attachment : ${attachments}"
+                            th:class="${attachment.isExpired()} ? 'attachment-download-item attachment-download-item--expired' : 'attachment-download-item'">
                             <span class="attachment-download-item__icon">📎</span>
-                            <a th:href="@{/board/attachments/{id}/download(id=${attachment.id})}"
+                            <!-- 다운로드 가능 -->
+                            <a th:unless="${attachment.isExpired()}"
+                               th:href="@{/board/attachments/{id}/download(id=${attachment.id})}"
                                class="attachment-download-item__name"
                                th:text="${attachment.originalName}">파일명</a>
-                            <span class="attachment-download-item__size" th:text="${attachment.fileSizeDisplay}">크기</span>
+                            <!-- 만료됨 -->
+                            <span th:if="${attachment.isExpired()}"
+                                  class="attachment-download-item__name attachment-download-item__name--expired"
+                                  th:text="${attachment.originalName}">파일명</span>
+                            <!-- 크기 + 만료일 또는 만료 배지 -->
+                            <span th:if="${attachment.isExpired()}" class="attachment-expired-badge">다운로드 기간 만료</span>
+                            <th:block th:unless="${attachment.isExpired()}">
+                                <span class="attachment-download-item__size" th:text="${attachment.fileSizeDisplay}">크기</span>
+                                <span th:if="${attachment.expiresAt != null}" class="attachment-expiry-info"
+                                      th:text="'~' + ${#temporals.format(attachment.expiresAt, 'yyyy-MM-dd')}">~2025-12-31</span>
+                            </th:block>
                         </li>
                     </ul>
                 </div>
@@ -76,117 +94,8 @@
                 </div>
 
                 <!-- 댓글 -->
-                <div class="comments-section">
-                    <h3 class="comments-section__title">
-                        댓글 <span class="comment-count" th:text="${board.commentCount}">0</span>
-                    </h3>
-
-                    <!-- 댓글 작성 폼 -->
-                    <form th:action="@{/board/{id}/comments(id=${board.id})}" method="post" class="comment-form">
-                        <textarea
-                            name="content"
-                            class="comment-form__input"
-                            placeholder="댓글을 입력하세요"
-                            required
-                            maxlength="1000"
-                            rows="3"></textarea>
-                        <button type="submit" class="comment-form__submit">등록</button>
-                    </form>
-
-                    <!-- 댓글 목록 -->
-                    <div class="comments-list">
-                        <div th:if="${comments.isEmpty()}" class="comments-empty">
-                            첫 댓글을 작성해보세요.
-                        </div>
-
-                        <div th:each="comment : ${comments}" class="comment-item">
-                            <div class="comment-item__header">
-                                <span class="comment-item__author" th:text="${comment.authorDisplayName}">작성자</span>
-                                <time class="comment-item__date" th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
-                            </div>
-                            <p th:id="'comment-text-' + ${comment.id}" class="comment-item__content" th:text="${comment.content}">댓글 내용</p>
-                            <!-- 인라인 수정 폼 (기본 숨김) -->
-                            <div th:if="${currentUser != null && comment.userId == currentUser.userId}"
-                                 th:id="'comment-edit-' + ${comment.id}" class="comment-edit" style="display:none;">
-                                <form th:action="@{/board/comments/{id}/edit(id=${comment.id})}" method="post">
-                                    <input type="hidden" name="boardId" th:value="${board.id}" />
-                                    <textarea name="content" class="comment-form__input comment-edit__textarea"
-                                              rows="3" maxlength="1000" th:text="${comment.content}"></textarea>
-                                    <div class="comment-edit__actions">
-                                        <button type="button" class="comment-item__cancel-btn"
-                                                th:onclick="'cancelEdit(' + ${comment.id} + ')'">취소</button>
-                                        <button type="submit" class="comment-form__submit">저장</button>
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="comment-item__footer">
-                                <button type="button" class="comment-item__reply-btn"
-                                        th:data-reply-target="${comment.id}"
-                                        th:onclick="'toggleReply(' + ${comment.id} + ')'">
-                                    <th:block th:if="${!comment.replies.isEmpty()}">답글 <span th:text="${comment.replies.size()}">0</span></th:block>
-                                    <th:block th:if="${comment.replies.isEmpty()}">답글</th:block>
-                                </button>
-                                <th:block th:if="${currentUser != null && comment.userId == currentUser.userId}">
-                                    <button type="button" class="comment-item__edit-btn"
-                                            th:onclick="'startEdit(' + ${comment.id} + ')'">수정</button>
-                                    <form th:action="@{/board/comments/{commentId}/delete(commentId=${comment.id})}" method="post"
-                                          style="display: inline;" onsubmit="return confirm('댓글을 삭제하시겠습니까?');">
-                                        <input type="hidden" name="boardId" th:value="${board.id}" />
-                                        <button type="submit" class="comment-item__delete">삭제</button>
-                                    </form>
-                                </th:block>
-                            </div>
-
-                            <!-- 답댓글 아코디언 영역 -->
-                            <div th:id="'reply-area-' + ${comment.id}" class="reply-area">
-                                <!-- 답댓글 목록 -->
-                                <div th:if="${!comment.replies.isEmpty()}" class="reply-list">
-                                    <div th:each="reply : ${comment.replies}" class="comment-item comment-item--reply">
-                                        <div class="comment-item__header">
-                                            <span class="comment-item__author" th:text="${reply.authorDisplayName}">작성자</span>
-                                            <time class="comment-item__date" th:text="${#temporals.format(reply.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
-                                        </div>
-                                        <p th:id="'comment-text-' + ${reply.id}" class="comment-item__content" th:text="${reply.content}">답댓글 내용</p>
-                                        <!-- 인라인 수정 폼 (기본 숨김) -->
-                                        <div th:if="${currentUser != null && reply.userId == currentUser.userId}"
-                                             th:id="'comment-edit-' + ${reply.id}" class="comment-edit" style="display:none;">
-                                            <form th:action="@{/board/comments/{id}/edit(id=${reply.id})}" method="post">
-                                                <input type="hidden" name="boardId" th:value="${board.id}" />
-                                                <textarea name="content" class="comment-form__input comment-edit__textarea"
-                                                          rows="2" maxlength="1000" th:text="${reply.content}"></textarea>
-                                                <div class="comment-edit__actions">
-                                                    <button type="button" class="comment-item__cancel-btn"
-                                                            th:onclick="'cancelEdit(' + ${reply.id} + ')'">취소</button>
-                                                    <button type="submit" class="comment-form__submit">저장</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                        <div th:if="${currentUser != null && reply.userId == currentUser.userId}" class="comment-item__footer">
-                                            <button type="button" class="comment-item__edit-btn"
-                                                    th:onclick="'startEdit(' + ${reply.id} + ')'">수정</button>
-                                            <form th:action="@{/board/comments/{commentId}/delete(commentId=${reply.id})}" method="post"
-                                                  style="display: inline;" onsubmit="return confirm('답글을 삭제하시겠습니까?');">
-                                                <input type="hidden" name="boardId" th:value="${board.id}" />
-                                                <button type="submit" class="comment-item__delete">삭제</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- 답댓글 작성 폼 -->
-                                <form th:action="@{/board/{id}/comments(id=${board.id})}" method="post" class="comment-form comment-form--reply">
-                                    <input type="hidden" name="parentId" th:value="${comment.id}" />
-                                    <textarea
-                                        name="content"
-                                        class="comment-form__input"
-                                        placeholder="답글을 입력하세요"
-                                        required
-                                        maxlength="1000"
-                                        rows="2"></textarea>
-                                    <button type="submit" class="comment-form__submit">등록</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                <div id="comments-section-wrapper">
+                    <th:block th:insert="~{fragments/comments :: commentsList}"></th:block>
                 </div>
 
                 <div class="board-detail__actions">
@@ -213,7 +122,9 @@
     </th:block>
 
     <th:block th:fragment="pageScripts">
+        <script src="/pages/board/board.js"></script>
         <script th:inline="javascript">
+            var profilePhotoUrlPattern = /*[[${profilePhotoUrlPattern}]]*/ '';
             // 읽음 처리 (N 배지 소멸)
             (function() {
                 var boardId = String(/*[[${board.id}]]*/0);
@@ -264,6 +175,7 @@
             (function() {
                 var viewer = document.getElementById('imageViewer');
                 var mainImg = document.getElementById('viewerMainImg');
+                var mainEl = viewer.querySelector('.img-viewer__main');
                 var thumbsEl = document.getElementById('viewerThumbs');
                 var counterEl = document.getElementById('viewerCounter');
                 var prevBtn = viewer.querySelector('.img-viewer__prev');
@@ -272,7 +184,141 @@
                 var srcs = [];
                 var current = 0;
 
-                // 콘텐츠 내 이미지 수집
+                // ── 줌/패닝 상태 ──────────────────────────────────────────
+                var scale = 1;
+                var translateX = 0;
+                var translateY = 0;
+                var MIN_SCALE = 1;
+                var MAX_SCALE = 5;
+
+                function applyTransform() {
+                    mainImg.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
+                    mainImg.style.cursor = scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in';
+                }
+
+                function resetZoom() {
+                    scale = 1; translateX = 0; translateY = 0; isDragging = false;
+                    mainImg.style.transform = '';
+                    mainImg.style.cursor = 'zoom-in';
+                }
+
+                // ── PC: 휠 줌 (커서 위치 기준) ────────────────────────────
+                mainEl.addEventListener('wheel', function(e) {
+                    e.preventDefault();
+                    var factor = e.deltaY < 0 ? 1.15 : (1 / 1.15);
+                    var newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+                    if (newScale === scale) return;
+                    if (newScale <= MIN_SCALE) {
+                        scale = MIN_SCALE; translateX = 0; translateY = 0;
+                    } else {
+                        // mainEl 중심 기준으로 커서 위치에 맞게 translate 보정
+                        var rect = mainEl.getBoundingClientRect();
+                        var ncx = rect.left + rect.width / 2;
+                        var ncy = rect.top + rect.height / 2;
+                        var ox = e.clientX - ncx;
+                        var oy = e.clientY - ncy;
+                        var ratio = newScale / scale;
+                        translateX = ox * (1 - ratio) + translateX * ratio;
+                        translateY = oy * (1 - ratio) + translateY * ratio;
+                        scale = newScale;
+                    }
+                    applyTransform();
+                }, { passive: false });
+
+                // ── PC: 마우스 드래그 패닝 ─────────────────────────────────
+                var isDragging = false;
+                var dragStartX = 0, dragStartY = 0, dragStartTX = 0, dragStartTY = 0;
+
+                mainImg.addEventListener('mousedown', function(e) {
+                    if (scale <= 1 || e.button !== 0) return;
+                    isDragging = true;
+                    dragStartX = e.clientX; dragStartY = e.clientY;
+                    dragStartTX = translateX; dragStartTY = translateY;
+                    mainImg.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+                document.addEventListener('mousemove', function(e) {
+                    if (!isDragging) return;
+                    translateX = dragStartTX + (e.clientX - dragStartX);
+                    translateY = dragStartTY + (e.clientY - dragStartY);
+                    applyTransform();
+                });
+                document.addEventListener('mouseup', function() {
+                    if (isDragging) {
+                        isDragging = false;
+                        mainImg.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
+                    }
+                });
+
+                // ── 모바일: 핀치 줌 + 단일 터치 패닝 ────────────────────────
+                var isPinching = false;
+                var gestureWasPinch = false; // 핀치가 있었던 제스처인지 추적
+                var pinchStartDist = 0, pinchStartScale = 1;
+                var pinchStartTX = 0, pinchStartTY = 0;
+                var touchStartX = 0, touchStartTX = 0, touchStartTY = 0;
+
+                function getTouchDist(t1, t2) {
+                    var dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+                    return Math.sqrt(dx * dx + dy * dy);
+                }
+
+                mainEl.addEventListener('touchstart', function(e) {
+                    if (e.touches.length === 2) {
+                        isPinching = true;
+                        gestureWasPinch = true; // 이 제스처에 핀치가 포함됨
+                        pinchStartDist = getTouchDist(e.touches[0], e.touches[1]);
+                        pinchStartScale = scale;
+                        pinchStartTX = translateX; pinchStartTY = translateY;
+                        e.preventDefault();
+                    } else if (e.touches.length === 1) {
+                        gestureWasPinch = false; // 새 단일 터치 제스처 시작
+                        touchStartX = e.touches[0].clientX;
+                        if (scale > 1) {
+                            // 줌 상태: 패닝 시작
+                            dragStartX = e.touches[0].clientX;
+                            dragStartY = e.touches[0].clientY;
+                            dragStartTX = translateX; dragStartTY = translateY;
+                        }
+                    }
+                }, { passive: false });
+
+                mainEl.addEventListener('touchmove', function(e) {
+                    if (isPinching && e.touches.length === 2) {
+                        e.preventDefault();
+                        var dist = getTouchDist(e.touches[0], e.touches[1]);
+                        var newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, pinchStartScale * (dist / pinchStartDist)));
+                        // 핀치 중심점 기준 보정
+                        var rect = mainEl.getBoundingClientRect();
+                        var ncx = rect.left + rect.width / 2;
+                        var ncy = rect.top + rect.height / 2;
+                        var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                        var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                        var ox = mx - ncx, oy = my - ncy;
+                        var ratio = newScale / pinchStartScale;
+                        translateX = ox * (1 - ratio) + pinchStartTX * ratio;
+                        translateY = oy * (1 - ratio) + pinchStartTY * ratio;
+                        scale = newScale;
+                        applyTransform();
+                    } else if (!isPinching && e.touches.length === 1 && scale > 1) {
+                        e.preventDefault();
+                        translateX = dragStartTX + (e.touches[0].clientX - dragStartX);
+                        translateY = dragStartTY + (e.touches[0].clientY - dragStartY);
+                        applyTransform();
+                    }
+                }, { passive: false });
+
+                mainEl.addEventListener('touchend', function(e) {
+                    if (e.touches.length < 2) isPinching = false;
+                    // 핀치가 없었던 순수 단일 터치 스와이프만 이미지 전환
+                    if (!gestureWasPinch && scale <= 1 && e.changedTouches.length > 0) {
+                        var dx = e.changedTouches[0].clientX - touchStartX;
+                        if (Math.abs(dx) > 50) {
+                            if (dx < 0) nextImage(); else prevImage();
+                        }
+                    }
+                });
+
+                // ── 콘텐츠 내 이미지 수집 ─────────────────────────────────
                 var contentImgs = Array.from(document.querySelectorAll('.board-detail__content img'));
                 if (contentImgs.length === 0) return;
 
@@ -310,21 +356,16 @@
                 }
 
                 function closeViewer() {
+                    resetZoom();
                     viewer.style.display = 'none';
                     document.body.style.overflow = '';
                 }
 
-                function prevImage() {
-                    current = (current - 1 + srcs.length) % srcs.length;
-                    updateViewer();
-                }
-
-                function nextImage() {
-                    current = (current + 1) % srcs.length;
-                    updateViewer();
-                }
+                function prevImage() { current = (current - 1 + srcs.length) % srcs.length; updateViewer(); }
+                function nextImage() { current = (current + 1) % srcs.length; updateViewer(); }
 
                 function updateViewer() {
+                    resetZoom();
                     mainImg.src = srcs[current];
                     counterEl.textContent = srcs.length > 1 ? (current + 1) + ' / ' + srcs.length : '';
                     var thumbs = thumbsEl.querySelectorAll('.img-viewer__thumb');
@@ -341,32 +382,27 @@
                 prevBtn.addEventListener('click', function(e) { e.stopPropagation(); prevImage(); });
                 nextBtn.addEventListener('click', function(e) { e.stopPropagation(); nextImage(); });
 
-                // 배경 클릭으로 닫기
+                // 배경 클릭으로 닫기 (줌 상태에서는 제외)
                 viewer.addEventListener('click', function(e) {
-                    if (e.target === viewer || e.target === viewer.querySelector('.img-viewer__main')) {
-                        closeViewer();
-                    }
+                    if (scale > 1) return;
+                    if (e.target === viewer || e.target === mainEl) closeViewer();
                 });
 
-                // 키보드 내비게이션
+                // 키보드: 방향키 이동, ESC 닫기, +/- 줌
                 document.addEventListener('keydown', function(e) {
                     if (viewer.style.display === 'none') return;
                     if (e.key === 'ArrowLeft') prevImage();
                     else if (e.key === 'ArrowRight') nextImage();
                     else if (e.key === 'Escape') closeViewer();
-                });
-
-                // 터치 스와이프
-                var touchStartX = 0;
-                viewer.querySelector('.img-viewer__main').addEventListener('touchstart', function(e) {
-                    touchStartX = e.touches[0].clientX;
-                }, { passive: true });
-                viewer.querySelector('.img-viewer__main').addEventListener('touchend', function(e) {
-                    var dx = e.changedTouches[0].clientX - touchStartX;
-                    if (Math.abs(dx) > 50) {
-                        if (dx < 0) nextImage(); else prevImage();
+                    else if (e.key === '+' || e.key === '=') {
+                        scale = Math.min(MAX_SCALE, scale * 1.2);
+                        applyTransform();
+                    } else if (e.key === '-') {
+                        scale = Math.max(MIN_SCALE, scale / 1.2);
+                        if (scale <= MIN_SCALE) { translateX = 0; translateY = 0; }
+                        applyTransform();
                     }
-                }, { passive: true });
+                });
             })();
 
             // 댓글 인라인 수정
@@ -404,6 +440,92 @@
                 }
             }
 
+            // AJAX 댓글 처리
+            var boardId = /*[[${board.id}]]*/ 0;
+
+            function reloadComments(extraOpenId) {
+                // 리로드 전에 현재 열린 답글 영역 ID 목록 수집
+                var openIds = [];
+                document.querySelectorAll('.reply-area--open').forEach(function(area) {
+                    openIds.push(area.id.replace('reply-area-', ''));
+                });
+                if (extraOpenId && openIds.indexOf(String(extraOpenId)) === -1) {
+                    openIds.push(String(extraOpenId));
+                }
+
+                return fetch('/board/' + boardId + '/comments/fragment')
+                    .then(function(res) { return res.text(); })
+                    .then(function(html) {
+                        var wrapper = document.getElementById('comments-section-wrapper');
+                        if (wrapper) {
+                            wrapper.innerHTML = html;
+                            loadProfilePhotos(wrapper);
+                            // 열려 있던 답글 영역 복원
+                            openIds.forEach(function(id) {
+                                var area = document.getElementById('reply-area-' + id);
+                                if (!area) return;
+                                area.classList.add('reply-area--open');
+                                var footer = area.previousElementSibling;
+                                if (footer) {
+                                    var btn = footer.querySelector('.comment-item__reply-btn');
+                                    if (btn) btn.classList.add('comment-item__reply-btn--active');
+                                }
+                            });
+                        }
+                    })
+                    .catch(function(e) {
+                        console.error('댓글 새로고침 실패:', e);
+                    });
+            }
+
+            function getReplyAreaId(form) {
+                // 답글 폼/수정폼/삭제폼이 속한 reply-area의 comment ID 반환
+                var replyArea = form.closest('.reply-area');
+                if (replyArea) return replyArea.id.replace('reply-area-', '');
+                // 답글 작성 폼: parentId hidden input
+                var parentInput = form.querySelector('input[name="parentId"]');
+                if (parentInput && parentInput.value) return parentInput.value;
+                return null;
+            }
+
+            function submitCommentAjax(form, btn, keepOpenId) {
+                if (btn) btn.disabled = true;
+                var data = new FormData(form);
+                fetch(form.action, { method: 'POST', body: data, redirect: 'manual' })
+                    .then(function() { return reloadComments(keepOpenId); })
+                    .catch(function(e) { console.error('댓글 요청 오류:', e); })
+                    .then(function() { if (btn) btn.disabled = false; });
+            }
+
+            // 이벤트 델리게이션: 댓글 관련 폼 submit 인터셉트
+            document.addEventListener('submit', function(e) {
+                var form = e.target;
+                // 댓글 작성 / 답글 작성
+                if (form.classList.contains('comment-form')) {
+                    var textarea = form.querySelector('textarea[name="content"]');
+                    if (!textarea || !textarea.value.trim()) return;
+                    e.preventDefault();
+                    submitCommentAjax(form, form.querySelector('button[type="submit"]'), getReplyAreaId(form));
+                    return;
+                }
+                // 댓글 수정
+                if (form.classList.contains('comment-edit__form')) {
+                    e.preventDefault();
+                    submitCommentAjax(form, form.querySelector('button[type="submit"]'), getReplyAreaId(form));
+                    return;
+                }
+                // 댓글 삭제
+                if (form.classList.contains('comment-delete-form')) {
+                    if (!confirm('댓글을 삭제하시겠습니까?')) {
+                        e.preventDefault();
+                        return;
+                    }
+                    e.preventDefault();
+                    submitCommentAjax(form, null, getReplyAreaId(form));
+                    return;
+                }
+            });
+
             // 좋아요 토글
             function toggleLike() {
                 const btn = document.querySelector('.like-btn');
@@ -426,6 +548,9 @@
                 })
                 .catch(error => console.error('Error:', error));
             }
+
+            // 프로필 사진 로드
+            loadProfilePhotos();
         </script>
     </th:block>
 </body>

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,7 +21,11 @@ public interface BoardLikeRepository extends JpaRepository<BoardLike, BoardLike.
 
     boolean existsByBoardIdAndUserId(Long boardId, String userId);
 
-    void deleteByBoardIdAndUserId(Long boardId, String userId);
+    // 실제 삭제 건수 반환 - 0이면 이미 삭제됨 (동시 요청 방어)
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM BoardLike bl WHERE bl.boardId = :boardId AND bl.userId = :userId")
+    int deleteByBoardIdAndUserId(@Param("boardId") Long boardId, @Param("userId") String userId);
 
     void deleteByBoardId(Long boardId);
 

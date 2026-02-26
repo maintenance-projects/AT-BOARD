@@ -36,7 +36,11 @@
             </div>
             <!-- 접속자 정보 (모바일) -->
             <div class="category-menu__user" th:if="${currentUser != null}">
-                <span class="board-sidebar__avatar" th:text="${#strings.substring(currentUser.userName, 0, 1)}">홍</span>
+                <span class="board-sidebar__avatar"
+                      th:attr="data-photo-url=${profilePhotoUrlPattern != null && !#strings.isEmpty(profilePhotoUrlPattern) ? #strings.replace(profilePhotoUrlPattern, '{userId}', currentUser.userId) : ''}">
+                    <span class="board-sidebar__avatar-letter" th:text="${#strings.substring(currentUser.userName, 0, 1)}">홍</span>
+                    <img class="board-sidebar__avatar-img" alt="" />
+                </span>
                 <div class="board-sidebar__user-info">
                     <span class="board-sidebar__user-name" th:text="${currentUser.userName}">홍길동</span>
                     <span class="board-sidebar__user-pos"
@@ -51,8 +55,8 @@
                    class="category-menu__item"
                    th:attr="data-category-id=${category.id}">
                     <span th:text="${category.name}">게시판명</span>
-                    <span th:class="${category.deptSpecific ? 'cat-badge cat-badge--dept' : 'cat-badge cat-badge--company'}"
-                          th:text="${category.deptSpecific ? '부서' : '전사'}"></span>
+                    <span th:if="${category.deptId != null}" class="cat-badge cat-badge--dept">부서</span>
+                    <span th:if="${category.deptId == null && !category.deptSpecific}" class="cat-badge cat-badge--company">전사</span>
                     <span class="new-badge">N</span>
                 </a>
             </nav>
@@ -94,7 +98,11 @@
                 <aside class="board-sidebar">
                     <!-- 접속자 정보 -->
                     <div class="board-sidebar__user" th:if="${currentUser != null}">
-                        <span class="board-sidebar__avatar" th:text="${#strings.substring(currentUser.userName, 0, 1)}">홍</span>
+                        <span class="board-sidebar__avatar"
+                              th:attr="data-photo-url=${profilePhotoUrlPattern != null && !#strings.isEmpty(profilePhotoUrlPattern) ? #strings.replace(profilePhotoUrlPattern, '{userId}', currentUser.userId) : ''}">
+                            <span class="board-sidebar__avatar-letter" th:text="${#strings.substring(currentUser.userName, 0, 1)}">홍</span>
+                            <img class="board-sidebar__avatar-img" alt="" />
+                        </span>
                         <div class="board-sidebar__user-info">
                             <span class="board-sidebar__user-dept" th:if="${currentUser.deptName != null && !#strings.isEmpty(currentUser.deptName)}"
                                   th:text="${currentUser.deptName}">개발팀</span>
@@ -110,8 +118,8 @@
                            class="board-sidebar__item"
                            th:attr="data-category-id=${category.id}">
                             <span th:text="${category.name}">게시판명</span>
-                            <span th:class="${category.deptSpecific ? 'cat-badge cat-badge--dept' : 'cat-badge cat-badge--company'}"
-                                  th:text="${category.deptSpecific ? '부서' : '전사'}"></span>
+                            <span th:if="${category.deptId != null}" class="cat-badge cat-badge--dept">부서</span>
+                            <span th:if="${category.deptId == null && !category.deptSpecific}" class="cat-badge cat-badge--company">전사</span>
                             <span class="new-badge">N</span>
                         </a>
                     </nav>
@@ -142,9 +150,17 @@
                                         <span th:if="${board.hasImage}" class="board-item__img-badge" title="이미지 포함">
                                             <span class="ico ico--image" aria-hidden="true"></span>
                                         </span>
+                                        <span th:if="${attachedBoardIds.contains(board.id)}" class="board-item__attach-badge" title="첨부파일 있음">
+                                            <span class="ico ico--attach" aria-hidden="true"></span>
+                                        </span>
                                         <span class="new-badge">N</span>
                                     </h2>
                                         <div class="board-item__meta">
+                                            <span class="profile-avatar"
+                                                  th:attr="data-photo-url=${profilePhotoUrlPattern != null && !#strings.isEmpty(profilePhotoUrlPattern) ? #strings.replace(profilePhotoUrlPattern, '{userId}', board.userId) : ''}">
+                                                <span class="profile-avatar__letter" th:text="${#strings.substring(board.authorNameOnly, 0, 1)}">홍</span>
+                                                <img class="profile-avatar__img" alt="" />
+                                            </span>
                                             <span class="board-item__author" th:text="${board.authorName}">작성자</span>
                                             <span class="board-item__dot">·</span>
                                             <time class="board-item__date" th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
@@ -220,6 +236,7 @@
     <th:block th:fragment="pageScripts">
         <script src="/pages/board/board.js"></script>
         <script th:inline="javascript">
+            var profilePhotoUrlPattern = /*[[${profilePhotoUrlPattern}]]*/ '';
             // 최상단 이동 플로팅 버튼
             (function() {
                 const btn = document.getElementById('scrollTopBtn');
@@ -344,6 +361,7 @@
                                     boardItems.appendChild(article);
                                 });
                                 currentPage = data.currentPage;
+                                loadProfilePhotos(boardItems);
                             }
                         })
                         .catch(error => console.error('Error loading boards:', error))
@@ -379,6 +397,7 @@
                     const createdAt = formatDate(board.createdAt);
 
                     const hasImage = board.content && board.content.includes('<img');
+                    const hasAttachment = !!board.hasAttachment;
                     const isNewPost = window._atbRead && window._atbRead.isNewUnread(board.id, board.createdAtEpochMilli);
                     article.setAttribute('data-board-id', board.id);
                     article.setAttribute('data-created-at', board.createdAtEpochMilli || 0);
@@ -388,9 +407,11 @@
                             <h2 class="board-item__title">
                                 <span>${escapeHtml(board.title)}</span>
                                 ${hasImage ? '<span class="board-item__img-badge" title="이미지 포함"><span class="ico ico--image" aria-hidden="true"></span></span>' : ''}
+                                ${hasAttachment ? '<span class="board-item__attach-badge" title="첨부파일 있음"><span class="ico ico--attach" aria-hidden="true"></span></span>' : ''}
                                 ${isNewPost ? '<span class="new-badge" style="display:inline;">N</span>' : '<span class="new-badge">N</span>'}
                             </h2>
                             <div class="board-item__meta">
+                                ${profilePhotoUrlPattern ? `<span class="profile-avatar" data-photo-url="${profilePhotoUrlPattern.replace('{userId}', board.userId || '')}"><span class="profile-avatar__letter">${escapeHtml((board.authorNameOnly || board.authorName || '').charAt(0))}</span><img class="profile-avatar__img" alt="" /></span>` : ''}
                                 <span class="board-item__author">${escapeHtml(board.authorName)}</span>
                                 <span class="board-item__dot">·</span>
                                 <time class="board-item__date">${createdAt}</time>
@@ -515,6 +536,40 @@
                     if (e.persisted) applyBadges();
                 });
             })();
+        </script>
+        <script>
+        // 게시판 목록 작성자 프로필 사진 로드
+        loadProfilePhotos();
+
+        // 사이드바 프로필 사진 로드 (1초 타임아웃, 실패 시 글자 아바타 유지)
+        (function() {
+            document.querySelectorAll('.board-sidebar__avatar[data-photo-url]').forEach(function(avatar) {
+                var url = avatar.getAttribute('data-photo-url');
+                if (!url) return;
+                var img = avatar.querySelector('.board-sidebar__avatar-img');
+                if (!img) return;
+                var done = false;
+                var timer = setTimeout(function() {
+                    if (done) return;
+                    done = true;
+                    img.onload = null;
+                    img.onerror = null;
+                    img.src = '';
+                }, 1000);
+                img.onload = function() {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timer);
+                    img.style.display = 'block';
+                };
+                img.onerror = function() {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timer);
+                };
+                img.src = url;
+            });
+        })();
         </script>
     </th:block>
 </body>

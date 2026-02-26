@@ -58,7 +58,7 @@ public class AdminCategoryController {
             return "redirect:/admin/login";
         }
 
-        List<Dept> departments = departmentRepository.findAll();
+        List<Dept> departments = getSortedDepartments();
         model.addAttribute("admin", admin);
         model.addAttribute("departments", departments);
         model.addAttribute("category", new BoardCategory());
@@ -108,7 +108,7 @@ public class AdminCategoryController {
             return "redirect:/admin/categories";
         }
 
-        List<Dept> departments = departmentRepository.findAll();
+        List<Dept> departments = getSortedDepartments();
         model.addAttribute("admin", admin);
         model.addAttribute("departments", departments);
         model.addAttribute("category", category);
@@ -147,6 +147,16 @@ public class AdminCategoryController {
         log.info("Admin {} updated category: {} (adminOnly: {})", admin.getAdminId(), name, adminOnly);
 
         return "redirect:/admin/categories";
+    }
+
+    private List<Dept> getSortedDepartments() {
+        List<Dept> departments = departmentRepository.findAll();
+        departments.sort((a, b) -> {
+            String oa = (a.getDeptOrder() != null && !a.getDeptOrder().isEmpty()) ? a.getDeptOrder() : "999999";
+            String ob = (b.getDeptOrder() != null && !b.getDeptOrder().isEmpty()) ? b.getDeptOrder() : "999999";
+            return oa.compareTo(ob);
+        });
+        return departments;
     }
 
     @PostMapping("/delete/{id}")

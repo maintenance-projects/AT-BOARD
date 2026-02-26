@@ -8,9 +8,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 부서 테이블을 주기적으로 확인하여 부서별 게시판을 자동 생성하는 스케줄러
@@ -29,14 +29,21 @@ public class DepartmentSyncScheduler {
      * "0 0 * * * *" = 매시간 정각 (0분 0초)
      */
     @Scheduled(cron = "${scheduler.department-sync.cron:0 0 * * * *}")
-    @Transactional("primaryTransactionManager")
     public void syncDepartmentCategories() {
         log.info("=== 부서-게시판 동기화 시작 ===");
 
         try {
-            // secondary DB에서 모든 부서 조회
+            // secondary DB에서 모든 부서 조회 후 deptOrder 문자열 오름차순 정렬
             List<Dept> departments = departmentRepository.findAll();
+            departments.sort((a, b) -> {
+                String v1 = a.getDeptOrder(); String oa = (v1 != null && !v1.isEmpty()) ? v1 : "999999";
+                String v2 = b.getDeptOrder(); String ob = (v2 != null && !v2.isEmpty()) ? v2 : "999999";
+                return oa.compareTo(ob);
+            });
             log.info("부서 테이블에서 {} 개의 부서 조회", departments.size());
+
+            // 1회 쿼리로 기존 카테고리 deptId 전체 로드 (부서당 1쿼리 N+1 방지)
+            Set<String> existingDeptIds = boardCategoryService.getExistingCategoryDeptIds();
 
             int createdCount = 0;
             int skippedCount = 0;
@@ -49,10 +56,7 @@ public class DepartmentSyncScheduler {
                     continue;
                 }
 
-                // 해당 부서의 게시판이 이미 존재하는지 확인
-                BoardCategory existingCategory = boardCategoryService.getCategoryByDeptIdAny(dept.getDeptId());
-
-                if (existingCategory == null) {
+                if (!existingDeptIds.contains(dept.getDeptId())) {
                     // 게시판이 없으면 새로 생성
                     java.util.Set<String> newDeptIds = new java.util.HashSet<>();
                     newDeptIds.add(dept.getDeptId());
@@ -67,6 +71,7 @@ public class DepartmentSyncScheduler {
                             .build();
 
                     boardCategoryService.createCategory(newCategory);
+                    existingDeptIds.add(dept.getDeptId()); // 동일 실행 내 중복 생성 방지
                     log.info("신규 부서 게시판 생성: {} (부서ID: {})", newCategory.getName(), dept.getDeptId());
                     createdCount++;
                 } else {
@@ -85,7 +90,6 @@ public class DepartmentSyncScheduler {
      * 애플리케이션 시작 시 1회 실행 (초기 동기화)
      */
     @Scheduled(initialDelay = 10000, fixedDelay = Long.MAX_VALUE)
-    @Transactional("primaryTransactionManager")
     public void initialSync() {
         log.info("=== 초기 부서-게시판 동기화 실행 ===");
         syncDepartmentCategories();

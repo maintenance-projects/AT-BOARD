@@ -44,6 +44,24 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     @Query("UPDATE Board b SET b.viewCount = b.viewCount + 1 WHERE b.id = :id")
     void incrementViewCount(@Param("id") Long id);
 
+    // 댓글 수 원자적 증가/감소 (Race condition 방지)
+    @Modifying
+    @Query("UPDATE Board b SET b.commentCount = b.commentCount + 1 WHERE b.id = :id")
+    void incrementCommentCount(@Param("id") Long id);
+
+    @Modifying
+    @Query("UPDATE Board b SET b.commentCount = b.commentCount - :count WHERE b.id = :id AND b.commentCount >= :count")
+    void decrementCommentCount(@Param("id") Long id, @Param("count") int count);
+
+    // 좋아요 수 원자적 증가/감소 (Race condition 방지)
+    @Modifying
+    @Query("UPDATE Board b SET b.likeCount = b.likeCount + 1 WHERE b.id = :id")
+    void incrementLikeCount(@Param("id") Long id);
+
+    @Modifying
+    @Query("UPDATE Board b SET b.likeCount = b.likeCount - 1 WHERE b.id = :id AND b.likeCount > 0")
+    void decrementLikeCount(@Param("id") Long id);
+
     // 카테고리 내 게시글 전체 벌크 삭제 (카테고리 삭제 시)
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Board b WHERE b.category = :category")

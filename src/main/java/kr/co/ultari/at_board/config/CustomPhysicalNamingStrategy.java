@@ -84,6 +84,16 @@ public class CustomPhysicalNamingStrategy implements PhysicalNamingStrategy {
         // Dept 테이블 전용 컬럼
         if ("deptName".equals(name))   return Identifier.toIdentifier(tableConfig.getDept().getDeptName());
         if ("parentDept".equals(name)) return Identifier.toIdentifier(tableConfig.getDept().getParentDept());
+        if ("deptOrder".equals(name)) {
+            String col = tableConfig.getDept().getDeptOrder();
+            return (col != null && !col.isEmpty()) ? Identifier.toIdentifier(col) : identifier;
+        }
+
+        // User 테이블 전용 컬럼 (정렬)
+        if ("userOrder".equals(name)) {
+            String col = tableConfig.getUser().getUserOrder();
+            return (col != null && !col.isEmpty()) ? Identifier.toIdentifier(col) : identifier;
+        }
 
         return identifier;
     }

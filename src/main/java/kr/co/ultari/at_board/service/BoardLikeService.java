@@ -1,6 +1,5 @@
 package kr.co.ultari.at_board.service;
 
-import kr.co.ultari.at_board.model.primary.Board;
 import kr.co.ultari.at_board.model.primary.BoardLike;
 import kr.co.ultari.at_board.repository.primary.BoardLikeRepository;
 import kr.co.ultari.at_board.repository.primary.BoardRepository;
@@ -34,27 +33,22 @@ public class BoardLikeService {
     @Transactional("primaryTransactionManager")
     public boolean toggleLike(Long boardId, String userId) {
         boolean exists = boardLikeRepository.existsByBoardIdAndUserId(boardId, userId);
-        Board board = boardRepository.findById(boardId).orElse(null);
-
-        if (board == null) {
-            return false;
-        }
 
         if (exists) {
-            // 좋아요 취소
-            boardLikeRepository.deleteByBoardIdAndUserId(boardId, userId);
-            board.setLikeCount(Math.max(0, board.getLikeCount() - 1));
-            boardRepository.save(board);
+            // 좋아요 취소: 실제 삭제된 건수 확인 후 카운트 감소 (동시 취소 방어)
+            int deleted = boardLikeRepository.deleteByBoardIdAndUserId(boardId, userId);
+            if (deleted > 0) {
+                boardRepository.decrementLikeCount(boardId);
+            }
             return false;
         } else {
-            // 좋아요 추가
+            // 좋아요 추가: 원자적 카운트 증가
             BoardLike like = BoardLike.builder()
                     .boardId(boardId)
                     .userId(userId)
                     .build();
             boardLikeRepository.save(like);
-            board.setLikeCount(board.getLikeCount() + 1);
-            boardRepository.save(board);
+            boardRepository.incrementLikeCount(boardId);
             return true;
         }
     }

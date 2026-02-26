@@ -13,8 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
 
 @Service
 @RequiredArgsConstructor
@@ -56,12 +59,20 @@ public class BoardCategoryService {
     }
 
     /**
-     * 사용자 부서 및 모든 상위 부서에 해당하는 활성 부서 게시판 목록 반환.
+     * 사용자 부서 및 모든 상위 부서에 해당하는 활성 부서 게시판 목록 반환 (deptOrder 오름차순).
      */
     public List<BoardCategory> getDeptCategoriesForUser(String userDeptId) {
         Set<String> ancestorDeptIds = departmentService.getSelfAndAncestorDeptIds(userDeptId);
         if (ancestorDeptIds.isEmpty()) return new ArrayList<>();
-        return boardCategoryRepository.findByDeptIdsInAndIsActiveTrue(ancestorDeptIds);
+        List<BoardCategory> categories = boardCategoryRepository.findByDeptIdsInAndIsActiveTrue(ancestorDeptIds);
+        // 트리 레벨 오름차순 → 같은 레벨 내 deptOrder 오름차순 (1회 findAll 쿼리)
+        Map<String, String> sortKeyMap = departmentService.getDeptCompositeSortKeyMap(ancestorDeptIds);
+        categories.sort((a, b) -> {
+            String ka = sortKeyMap.getOrDefault(a.getDeptId(), "99999_999999");
+            String kb = sortKeyMap.getOrDefault(b.getDeptId(), "99999_999999");
+            return ka.compareTo(kb);
+        });
+        return categories;
     }
 
     @Transactional("primaryTransactionManager")
@@ -98,6 +109,11 @@ public class BoardCategoryService {
         // 카테고리 삭제 (board_category_depts도 자동 삭제)
         boardCategoryRepository.deleteById(id);
         return true;
+    }
+
+    // 스케줄러용: 카테고리에 등록된 모든 deptId를 한 번에 로드 (N+1 방지)
+    public Set<String> getExistingCategoryDeptIds() {
+        return new HashSet<>(boardCategoryRepository.findAllExistingDeptIds());
     }
 
     public long getTotalCategoryCount() {

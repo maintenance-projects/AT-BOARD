@@ -149,7 +149,7 @@
 
             if (hasChildren) {
                 childrenEl = document.createElement('ul');
-                childrenEl.className = 'dept-tree__children dept-tree__children--open';
+                childrenEl.className = 'dept-tree__children';
                 node.children.forEach(function(child) {
                     childrenEl.appendChild(renderNode(child, map));
                 });
@@ -158,7 +158,7 @@
             var toggleBtn = document.createElement('button');
             toggleBtn.type = 'button';
             toggleBtn.className = 'dept-tree__toggle' + (hasChildren ? '' : ' dept-tree__toggle--hidden');
-            toggleBtn.textContent = hasChildren ? '\u25bc' : '';
+            toggleBtn.textContent = hasChildren ? '\u25ba' : '';
             if (hasChildren) {
                 (function(btn, el) {
                     btn.onclick = function() {

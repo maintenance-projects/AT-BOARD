@@ -45,6 +45,13 @@ public class BoardAttachment {
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
+    public boolean isExpired() {
+        return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
+    }
+
     // 파일 크기를 사람이 읽기 좋은 형식으로 반환
     public String getFileSizeDisplay() {
         if (fileSize == null) return "0 B";

@@ -9,6 +9,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -19,8 +21,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,17 +41,16 @@ public class BoardAttachmentService {
 
     /**
      * 파일 업로드 후 DB에 임시 레코드(boardId=null) 생성 - 일반 사용자용 (용량·확장자 제한 적용)
-     * getMaxAttachmentSize/getBlockedExtensions 는 각자 @Transactional(readOnly=true) 를 가지므로
-     * uploadAttachment 의 primaryTransactionManager 트랜잭션에 참여하여 안전하게 읽음
+     * 파일 I/O가 DB 커넥션을 점유하지 않도록 @Transactional 제거.
+     * DB 저장은 attachmentRepository.save()의 자체 트랜잭션 사용.
      */
-    @Transactional("primaryTransactionManager")
-    public BoardAttachment uploadAttachment(MultipartFile file) throws IOException {
+    public BoardAttachment uploadAttachment(MultipartFile file, LocalDateTime expiresAt) throws IOException {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("파일이 비어있습니다.");
         }
 
         long maxSize = appSettingService.getMaxAttachmentSize();
-        log.info("uploadAttachment: fileSize={}, maxSize={}", file.getSize(), maxSize);
+        log.info("uploadAttachment: fileSize={}, maxSize={}, expiresAt={}", file.getSize(), maxSize, expiresAt);
         if (file.getSize() > maxSize) {
             throw new IllegalArgumentException("파일 크기는 " + (maxSize / 1024 / 1024) + "MB를 초과할 수 없습니다.");
         }
@@ -67,13 +72,13 @@ public class BoardAttachmentService {
             throw new IllegalArgumentException("업로드할 수 없는 파일 형식입니다: ." + extension);
         }
 
-        return saveFile(file, originalFilename, extension);
+        return saveFile(file, originalFilename, extension, expiresAt);
     }
 
     /**
      * 파일 업로드 - 관리자용 (용량·확장자 제한 없음)
+     * 파일 I/O가 DB 커넥션을 점유하지 않도록 @Transactional 제거.
      */
-    @Transactional("primaryTransactionManager")
     public BoardAttachment uploadAttachmentAdmin(MultipartFile file) throws IOException {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("파일이 비어있습니다.");
@@ -90,10 +95,11 @@ public class BoardAttachmentService {
             extension = originalFilename.substring(lastDot + 1).toLowerCase();
         }
 
-        return saveFile(file, originalFilename, extension);
+        return saveFile(file, originalFilename, extension, null);
     }
 
-    private BoardAttachment saveFile(MultipartFile file, String originalFilename, String extension) throws IOException {
+    private BoardAttachment saveFile(MultipartFile file, String originalFilename, String extension,
+                                     LocalDateTime expiresAt) throws IOException {
         String dateFolder = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
         Path attachDir = Paths.get(uploadPath, "attach", dateFolder);
         Files.createDirectories(attachDir);
@@ -111,55 +117,74 @@ public class BoardAttachmentService {
                 .filePath(relativeFilePath)
                 .fileSize(file.getSize())
                 .mimeType(file.getContentType())
+                .expiresAt(expiresAt)
                 .build();
 
-        return attachmentRepository.save(attachment);
+        try {
+            return attachmentRepository.save(attachment);
+        } catch (Exception e) {
+            // DB 저장 실패 시 업로드된 파일 정리
+            deleteFile(relativeFilePath);
+            throw e;
+        }
     }
 
     /**
-     * 첨부파일들에 게시글 ID 할당
+     * 첨부파일들에 게시글 ID 할당 (벌크 UPDATE - N+1 방지)
      */
     @Transactional("primaryTransactionManager")
     public void assignToBoard(List<Long> attachmentIds, Long boardId) {
         if (attachmentIds == null || attachmentIds.isEmpty()) {
             return;
         }
-        for (Long attachmentId : attachmentIds) {
-            attachmentRepository.findById(attachmentId).ifPresent(attachment -> {
-                // boardId가 null인 (아직 할당 안 된) 첨부파일만 처리
-                if (attachment.getBoardId() == null) {
-                    attachment.setBoardId(boardId);
-                    attachmentRepository.save(attachment);
-                }
-            });
-        }
+        attachmentRepository.assignBoardIdByIds(boardId, attachmentIds);
     }
 
     public List<BoardAttachment> getByBoardId(Long boardId) {
         return attachmentRepository.findByBoardId(boardId);
     }
 
+    @Transactional(value = "primaryTransactionManager", readOnly = true)
+    public Set<Long> getBoardIdsWithAttachments(List<Long> boardIds) {
+        if (boardIds == null || boardIds.isEmpty()) return Collections.emptySet();
+        return new HashSet<>(attachmentRepository.findBoardIdsWithAttachments(boardIds));
+    }
+
     /**
-     * 단일 첨부파일 삭제 (파일 + DB)
+     * 단일 첨부파일 삭제 (DB 먼저, 파일은 트랜잭션 커밋 후 삭제)
      */
     @Transactional("primaryTransactionManager")
     public void deleteAttachment(Long id) {
         attachmentRepository.findById(id).ifPresent(attachment -> {
-            deleteFile(attachment.getFilePath());
+            final String filePath = attachment.getFilePath();
             attachmentRepository.delete(attachment);
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deleteFile(filePath);
+                }
+            });
         });
     }
 
     /**
-     * 게시글의 모든 첨부파일 삭제
+     * 게시글의 모든 첨부파일 삭제 (DB 먼저, 파일은 트랜잭션 커밋 후 삭제)
      */
     @Transactional("primaryTransactionManager")
     public void deleteByBoardId(Long boardId) {
         List<BoardAttachment> attachments = attachmentRepository.findByBoardId(boardId);
-        for (BoardAttachment attachment : attachments) {
-            deleteFile(attachment.getFilePath());
-        }
+        final List<String> filePaths = attachments.stream()
+                .map(BoardAttachment::getFilePath)
+                .collect(Collectors.toList());
         attachmentRepository.deleteAllByBoardId(boardId);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (String path : filePaths) {
+                    deleteFile(path);
+                }
+            }
+        });
     }
 
     /**

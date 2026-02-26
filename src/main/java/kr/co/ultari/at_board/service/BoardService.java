@@ -3,7 +3,9 @@ package kr.co.ultari.at_board.service;
 import kr.co.ultari.at_board.model.primary.Board;
 import kr.co.ultari.at_board.model.primary.BoardCategory;
 import kr.co.ultari.at_board.model.secondary.User;
+import kr.co.ultari.at_board.repository.primary.BoardLikeRepository;
 import kr.co.ultari.at_board.repository.primary.BoardRepository;
+import kr.co.ultari.at_board.repository.primary.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -26,6 +28,8 @@ public class BoardService {
     private final BoardRepository boardRepository;
     private final BoardCategoryService boardCategoryService;
     private final DepartmentService departmentService;
+    private final CommentRepository commentRepository;
+    private final BoardLikeRepository boardLikeRepository;
 
     public List<Board> getAllBoards() {
         return boardRepository.findAllByOrderByCreatedAtDesc();
@@ -173,6 +177,9 @@ public class BoardService {
                 throw new IllegalArgumentException("본인이 작성한 글만 삭제할 수 있습니다.");
             }
 
+            // FK 제약 조건 순서: 댓글 → 좋아요 → 게시글
+            commentRepository.deleteByBoardId(id);
+            boardLikeRepository.deleteByBoardId(id);
             boardRepository.deleteById(id);
             return true;
         }
@@ -209,6 +216,9 @@ public class BoardService {
     @Transactional("primaryTransactionManager")
     public boolean deleteBoardByAdmin(Long id) {
         if (boardRepository.existsById(id)) {
+            // FK 제약 조건 순서: 댓글 → 좋아요 → 게시글
+            commentRepository.deleteByBoardId(id);
+            boardLikeRepository.deleteByBoardId(id);
             boardRepository.deleteById(id);
             return true;
         }

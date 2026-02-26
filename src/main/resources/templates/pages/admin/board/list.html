@@ -97,6 +97,12 @@
                                 <td th:text="${board.id}">1</td>
                                 <td>
                                     <a th:href="@{/admin/boards/{id}(id=${board.id}, categoryId=${categoryId}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}" th:text="${board.title}" class="link">제목</a>
+                                    <span th:if="${board.hasImage}" class="admin-title-badge" title="이미지 포함">
+                                        <span class="ico ico--image" aria-hidden="true"></span>
+                                    </span>
+                                    <span th:if="${attachedBoardIds.contains(board.id)}" class="admin-title-badge" title="첨부파일 있음">
+                                        <span class="ico ico--attach" aria-hidden="true"></span>
+                                    </span>
                                 </td>
                                 <td th:text="${board.authorName}">작성자</td>
                                 <td><span class="badge badge--secondary" th:text="${board.category != null ? board.category.name : '-'}">게시판</span></td>

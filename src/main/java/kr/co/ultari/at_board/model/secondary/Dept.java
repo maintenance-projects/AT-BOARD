@@ -21,4 +21,6 @@ public class Dept {
     private String deptName;
 
     private String parentDept;
+
+    private String deptOrder;
 }
