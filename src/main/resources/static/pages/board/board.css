@@ -1885,3 +1885,19 @@
     color: #94a3b8;
     margin-left: 4px;
 }
+
+/* 글쓰기/수정 - 모바일 Quill 툴바 sticky 고정
+   Android WebView 키보드 올라올 때 툴바가 헤더 뒤로 숨는 문제 해결 */
+@media (max-width: 767px) {
+    .quill-editor .ql-toolbar.ql-snow {
+        position: sticky;
+        top: 70px; /* app-header 높이 */
+        z-index: 50;
+        background: #f8f9fa;
+        border-radius: 0;
+    }
+
+    .ql-editor {
+        min-height: 200px !important;
+    }
+}

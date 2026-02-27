@@ -200,6 +200,15 @@
 
             initImageResize(quill);
 
+            // 안드로이드 WebView 키보드 대응: 에디터 포커스 시 툴바가 보이도록 스크롤
+            // (CSS sticky로 1차 대응, scrollIntoView로 2차 보정)
+            quill.root.addEventListener('focus', function() {
+                setTimeout(function() {
+                    var toolbar = document.querySelector('.ql-toolbar');
+                    if (toolbar) toolbar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 400);
+            });
+
             // 기존 내용 로드
             const existingContent = /*[[${board.content}]]*/ '';
             if (existingContent) {

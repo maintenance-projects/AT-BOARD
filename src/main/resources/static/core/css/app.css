@@ -34,6 +34,10 @@
     }
 }
 
+html {
+    scroll-padding-top: 78px; /* sticky 헤더 높이 보정 */
+}
+
 html,
 body {
     height: 100%;
