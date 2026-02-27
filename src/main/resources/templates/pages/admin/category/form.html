@@ -29,6 +29,20 @@
                     <span class="admin-sidebar__icon">⚙️</span>
                     환경설정
                 </a>
+                <div class="admin-sidebar__divider"></div>
+                <span class="admin-sidebar__section-label">매뉴얼 다운로드</span>
+                <a href="/core/guide/AT_BOARD_테이블정의서.xlsx" class="admin-sidebar__link" download>
+                    <span class="admin-sidebar__icon">📥</span>
+                    테이블정의서
+                </a>
+                <a href="/core/guide/게시판_사용자_매뉴얼.pptx" class="admin-sidebar__link" download>
+                    <span class="admin-sidebar__icon">📥</span>
+                    사용자 매뉴얼
+                </a>
+                <a href="/core/guide/관리자페이지_매뉴얼.pptx" class="admin-sidebar__link" download>
+                    <span class="admin-sidebar__icon">📥</span>
+                    관리자 매뉴얼
+                </a>
             </nav>
             <div class="admin-sidebar__footer">
                 <div class="admin-sidebar__user" th:if="${admin}">
@@ -73,6 +87,14 @@
                                 관리자만 글 작성 허용
                             </label>
                             <small class="form-help">체크하면 관리자 페이지에서만 글을 작성할 수 있습니다.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="notificationEnabled" name="notificationEnabled" value="true" th:checked="${category.notificationEnabled == true}" />
+                                새글 알림 발송
+                            </label>
+                            <small class="form-help">체크하면 새 게시글 작성 시 권한 있는 사용자에게 알림을 발송합니다.</small>
                         </div>
 
                         <div class="form-group">

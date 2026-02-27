@@ -74,6 +74,7 @@ public class AdminCategoryController {
                          @RequestParam(required = false) List<String> deptIds,
                          @RequestParam(defaultValue = "false") Boolean isActive,
                          @RequestParam(defaultValue = "false") Boolean adminOnly,
+                         @RequestParam(defaultValue = "false") Boolean notificationEnabled,
                          HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
         if (admin == null) {
@@ -87,6 +88,7 @@ public class AdminCategoryController {
                 .deptIds(deptIdSet)
                 .isActive(isActive)
                 .adminOnly(adminOnly)
+                .notificationEnabled(notificationEnabled)
                 .build();
 
         boardCategoryService.createCategory(category);
@@ -124,6 +126,7 @@ public class AdminCategoryController {
                          @RequestParam(required = false) String description,
                          @RequestParam(defaultValue = "false") Boolean isActive,
                          @RequestParam(defaultValue = "false") Boolean adminOnly,
+                         @RequestParam(defaultValue = "false") Boolean notificationEnabled,
                          @RequestParam(required = false) List<String> deptIds,
                          HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
@@ -140,6 +143,7 @@ public class AdminCategoryController {
         category.setDescription(description);
         category.setIsActive(isActive);
         category.setAdminOnly(adminOnly);
+        category.setNotificationEnabled(notificationEnabled);
         category.setDeptIds(deptIds != null ? new java.util.HashSet<>(deptIds) : new java.util.HashSet<>());
 
         boardCategoryService.updateCategory(id, category);

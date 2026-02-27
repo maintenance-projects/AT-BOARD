@@ -84,6 +84,21 @@ body {
     background: rgba(255,255,255,0.2);
 }
 
+.admin-sidebar__divider {
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    margin: 12px 20px;
+}
+
+.admin-sidebar__section-label {
+    display: block;
+    padding: 4px 20px 8px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.4);
+}
+
 /* Main Content */
 .admin-main {
     flex: 1;

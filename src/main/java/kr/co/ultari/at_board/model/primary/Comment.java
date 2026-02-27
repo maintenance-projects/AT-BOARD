@@ -35,16 +35,20 @@ public class Comment {
     @Column(name = "USER_ID", nullable = false, length = 50)
     private String userId;
 
-    @Column(name = "AUTHOR_NAME", nullable = false, length = 100)
+    @Column(name = "AUTHOR_NAME", nullable = false, length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String authorName;
 
-    @Column(name = "AUTHOR_POS_NAME", length = 100)
+    @Column(name = "AUTHOR_POS_NAME", length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String authorPosName;
 
-    @Column(name = "AUTHOR_DEPT_NAME", length = 100)
+    @Column(name = "AUTHOR_DEPT_NAME", length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String authorDeptName;
 
-    @Column(name = "CONTENT", nullable = false, length = 1000)
+    @Column(name = "CONTENT", nullable = false, length = 1000,
+            columnDefinition = "VARCHAR(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String content;
 
     @CreationTimestamp

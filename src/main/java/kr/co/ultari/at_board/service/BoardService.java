@@ -30,6 +30,7 @@ public class BoardService {
     private final DepartmentService departmentService;
     private final CommentRepository commentRepository;
     private final BoardLikeRepository boardLikeRepository;
+    private final NotificationService notificationService;
 
     public List<Board> getAllBoards() {
         return boardRepository.findAllByOrderByCreatedAtDesc();
@@ -145,7 +146,9 @@ public class BoardService {
                 .viewCount(0)
                 .build();
 
-        return boardRepository.save(board);
+        Board saved = boardRepository.save(board);
+        notificationService.notifyNewPost(saved);
+        return saved;
     }
 
     @Transactional("primaryTransactionManager")
@@ -210,7 +213,9 @@ public class BoardService {
     // 관리자용 메서드
     @Transactional("primaryTransactionManager")
     public Board createBoardByAdmin(Board board) {
-        return boardRepository.save(board);
+        Board saved = boardRepository.save(board);
+        notificationService.notifyNewPost(saved);
+        return saved;
     }
 
     @Transactional("primaryTransactionManager")

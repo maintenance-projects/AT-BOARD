@@ -125,7 +125,7 @@ public class FileController {
 
             // 업로드 디렉토리 생성 (날짜별 폴더)
             String dateFolder = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-            Path uploadDir = Paths.get(uploadPath, dateFolder);
+            Path uploadDir = Paths.get(uploadPath, "imgs", dateFolder);
             Files.createDirectories(uploadDir);
 
             // 고유 파일명 생성
@@ -136,7 +136,7 @@ public class FileController {
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
             // 웹 경로 생성
-            String webPath = "/uploads/" + dateFolder + "/" + uniqueFilename;
+            String webPath = "/uploads/imgs/" + dateFolder + "/" + uniqueFilename;
 
             response.put("url", webPath);
             response.put("filename", originalFilename);

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -51,6 +52,39 @@ public class SsoEntryController {
                 userId);
 
         return "redirect:/board";
+    }
+
+    /**
+     * /{userId}/board/{boardId} 로 접근 시 SSO 로그인 처리 후 해당 게시글로 리다이렉트
+     */
+    @RequestMapping(value = "/{userId}/board/{boardId:[0-9]+}", method = {RequestMethod.GET, RequestMethod.POST})
+    public String ssoEntryBoard(@PathVariable String userId,
+                                @PathVariable Long boardId,
+                                @RequestParam(required = false) Long categoryId,
+                                HttpSession session,
+                                HttpServletResponse response) throws IOException {
+        User user = (User) session.getAttribute("currentUser");
+        if (user == null) {
+            user = userService.processUserLogin(userId);
+            if (user == null) {
+                log.warn("SSO entry failed: user not found - {}", userId);
+                writeErrorPage(response, "등록되지 않은 사용자입니다.", "관리자에게 문의하세요.");
+                return null;
+            }
+            session.setAttribute("currentUser", user);
+            session.setAttribute("userId", user.getUserId());
+            session.setAttribute("deptId", user.getDeptId());
+            log.info("SSO entry board login: {} {} ({})",
+                    user.getUserName(),
+                    user.getPosName() != null ? user.getPosName() : "",
+                    userId);
+        }
+
+        StringBuilder url = new StringBuilder("redirect:/board/").append(boardId);
+        if (categoryId != null) {
+            url.append("?categoryId=").append(categoryId);
+        }
+        return url.toString();
     }
 
     private void writeErrorPage(HttpServletResponse response, String message, String subMessage) throws IOException {

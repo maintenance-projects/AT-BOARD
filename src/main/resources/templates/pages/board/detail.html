@@ -41,11 +41,14 @@
                             <span class="profile-avatar__letter" th:text="${#strings.substring(board.authorNameOnly, 0, 1)}">홍</span>
                             <img class="profile-avatar__img" alt="" />
                         </span>
-                        <span class="board-detail__author" th:text="${board.authorName}">작성자</span>
-                        <span class="board-detail__dot">·</span>
-                        <time class="board-detail__date" th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
-                        <span class="board-detail__dot">·</span>
-                        <span class="board-detail__views">조회 <span th:text="${board.viewCount}">0</span></span>
+                        <div class="board-detail__meta-text">
+                            <span class="board-detail__author" th:text="${board.authorName}">작성자</span>
+                            <div class="board-detail__meta-sub">
+                                <time class="board-detail__date" th:text="${#temporals.format(board.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
+                                <span class="board-detail__dot">·</span>
+                                <span class="board-detail__views">조회 <span th:text="${board.viewCount}">0</span></span>
+                            </div>
+                        </div>
                     </div>
                 </header>
 
@@ -551,6 +554,8 @@
 
             // 프로필 사진 로드
             loadProfilePhotos();
+            // 본문 이미지 로드 실패 시 대체 이미지
+            handleBrokenImages('.board-detail__content');
         </script>
     </th:block>
 </body>

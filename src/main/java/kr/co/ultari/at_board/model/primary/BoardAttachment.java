@@ -26,13 +26,15 @@ public class BoardAttachment {
     @Column(name = "BOARD_ID", nullable = true)
     private Long boardId;
 
-    @Column(name = "ORIGINAL_NAME", nullable = false, length = 500)
+    @Column(name = "ORIGINAL_NAME", nullable = false, length = 500,
+            columnDefinition = "VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String originalName;
 
     @Column(name = "STORED_NAME", nullable = false, length = 500)
     private String storedName;
 
-    @Column(name = "FILE_PATH", nullable = false, length = 1000)
+    @Column(name = "FILE_PATH", nullable = false, length = 1000,
+            columnDefinition = "VARCHAR(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String filePath;
 
     @Column(name = "FILE_SIZE", nullable = false)

@@ -27,17 +27,20 @@ public class BoardCategory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "NAME", nullable = false, length = 100)
+    @Column(name = "NAME", nullable = false, length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String name;
 
-    @Column(name = "DESCRIPTION", length = 500)
+    @Column(name = "DESCRIPTION", length = 500,
+            columnDefinition = "VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String description;
 
     // 단일 부서 정보 (스케줄러 자동 생성 게시판용, 다중 부서 선택 시 null)
     @Column(name = "DEPT_ID", length = 50)
     private String deptId;
 
-    @Column(name = "DEPT_NAME", length = 100)
+    @Column(name = "DEPT_NAME", length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String deptName;
 
     // 다중 부서 지원: board_category_depts 조인 테이블
@@ -57,6 +60,10 @@ public class BoardCategory {
     @Column(name = "ADMIN_ONLY", nullable = false)
     @Builder.Default
     private Boolean adminOnly = false;
+
+    @Column(name = "NOTIFICATION_ENABLED", nullable = false)
+    @Builder.Default
+    private Boolean notificationEnabled = false;
 
     @CreationTimestamp
     @Column(name = "CREATED_AT", nullable = false, updatable = false)

@@ -163,7 +163,9 @@ public class BoardController {
             Map<String, Object> dto = new HashMap<>();
             dto.put("id", board.getId());
             dto.put("title", board.getTitle());
+            dto.put("userId", board.getUserId());
             dto.put("authorName", board.getAuthorName());
+            dto.put("authorNameOnly", board.getAuthorNameOnly());
             dto.put("createdAt", board.getCreatedAt());
             dto.put("createdAtEpochMilli", board.getCreatedAtEpochMilli());
             dto.put("categoryId", board.getCategory() != null ? board.getCategory().getId() : null);

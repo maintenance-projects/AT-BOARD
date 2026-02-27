@@ -28,7 +28,8 @@ public class Admin {
     @Column(name = "PASSWORD", nullable = false, length = 255)
     private String password;
 
-    @Column(name = "ADMIN_NAME", nullable = false, length = 100)
+    @Column(name = "ADMIN_NAME", nullable = false, length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String adminName;
 
     @Enumerated(EnumType.STRING)

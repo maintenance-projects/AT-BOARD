@@ -29,23 +29,28 @@ public class Board {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "TITLE", nullable = false, length = 100)
+    @Column(name = "TITLE", nullable = false, length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String title;
 
-    @Column(name = "CONTENT", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "CONTENT", nullable = false,
+            columnDefinition = "TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String content;
 
     // User 객체 참조 대신 userId만 저장 (다른 DB이므로 FK 불가)
     @Column(name = "USER_ID", nullable = false, length = 50)
     private String userId;
 
-    @Column(name = "AUTHOR_NAME", nullable = false, length = 100)
+    @Column(name = "AUTHOR_NAME", nullable = false, length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String authorName;
 
-    @Column(name = "AUTHOR_POS_NAME", length = 100)
+    @Column(name = "AUTHOR_POS_NAME", length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String authorPosName;
 
-    @Column(name = "AUTHOR_DEPT_NAME", length = 100)
+    @Column(name = "AUTHOR_DEPT_NAME", length = 100,
+            columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String authorDeptName;
 
     // BoardCategory는 같은 DB이므로 FK 가능

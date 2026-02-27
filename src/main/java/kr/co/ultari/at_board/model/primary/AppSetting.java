@@ -20,6 +20,7 @@ public class AppSetting {
     @Column(name = "SETTING_KEY", length = 100)
     private String key;
 
-    @Column(name = "SETTING_VALUE", columnDefinition = "TEXT")
+    @Column(name = "SETTING_VALUE",
+            columnDefinition = "TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String value;
 }

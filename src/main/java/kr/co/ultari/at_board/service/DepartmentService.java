@@ -119,6 +119,55 @@ public class DepartmentService {
         return result;
     }
 
+    /**
+     * 특정 부서 ID의 자신 + 모든 하위 부서 ID 집합 반환 (알림 수신자 결정용).
+     * findAll() 1회 쿼리로 childMap 구성 후 BFS 탐색 (cycle guard 포함).
+     */
+    public Set<String> getSelfAndDescendantDeptIds(String deptId) {
+        if (deptId == null || deptId.isEmpty()) return new HashSet<>();
+        List<Dept> allDepts = departmentRepository.findAll();
+        Map<String, List<String>> childMap = new HashMap<>();
+        for (Dept d : allDepts) {
+            if (d.getParentDept() != null && !d.getParentDept().isEmpty() && !"0".equals(d.getParentDept())) {
+                childMap.computeIfAbsent(d.getParentDept(), k -> new java.util.ArrayList<>()).add(d.getDeptId());
+            }
+        }
+        Set<String> result = new HashSet<>();
+        java.util.Queue<String> queue = new java.util.LinkedList<>();
+        queue.add(deptId);
+        while (!queue.isEmpty()) {
+            String current = queue.poll();
+            if (!result.add(current)) continue; // cycle guard
+            List<String> children = childMap.get(current);
+            if (children != null) queue.addAll(children);
+        }
+        return result;
+    }
+
+    /**
+     * 여러 부서 ID 각각의 자신+하위 부서 ID 합집합 반환 (알림 수신자 결정용).
+     */
+    public Set<String> getSelfAndAllDescendantDeptIds(Set<String> deptIds) {
+        if (deptIds == null || deptIds.isEmpty()) return new HashSet<>();
+        List<Dept> allDepts = departmentRepository.findAll();
+        Map<String, List<String>> childMap = new HashMap<>();
+        for (Dept d : allDepts) {
+            if (d.getParentDept() != null && !d.getParentDept().isEmpty() && !"0".equals(d.getParentDept())) {
+                childMap.computeIfAbsent(d.getParentDept(), k -> new java.util.ArrayList<>()).add(d.getDeptId());
+            }
+        }
+        Set<String> result = new HashSet<>();
+        java.util.Queue<String> queue = new java.util.LinkedList<>();
+        queue.addAll(deptIds);
+        while (!queue.isEmpty()) {
+            String current = queue.poll();
+            if (!result.add(current)) continue; // cycle guard
+            List<String> children = childMap.get(current);
+            if (children != null) queue.addAll(children);
+        }
+        return result;
+    }
+
     public String getDeptName(String deptId) {
         if (deptId == null) return null;
         return departmentRepository.findByDeptId(deptId)

@@ -47,7 +47,7 @@
     </appender>
 
     <!-- 애플리케이션 로거 -->
-    <logger name="kr.co.ultari.at_board" level="${LOG_LEVEL_APP:-INFO}" additivity="false">
+    <logger name="kr.co.ultari.at_board" level="${LOG_LEVEL_APP:-DEBUG}" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
         <appender-ref ref="ERROR_FILE"/>
@@ -60,7 +60,7 @@
     </logger>
 
     <!-- Hibernate 파라미터 바인딩 로거 -->
-    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="${LOG_LEVEL_SQL_PARAM:-TRACE}" additivity="false">
+    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="${LOG_LEVEL_SQL_PARAM:-INFO}" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </logger>

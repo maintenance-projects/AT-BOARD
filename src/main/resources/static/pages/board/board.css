@@ -28,14 +28,14 @@
 .board-items {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
 .board-item {
     background: var(--surface);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    padding: 18px;
+    padding: 12px;
     cursor: pointer;
     transition: transform 0.15s ease;
 }
@@ -131,7 +131,7 @@
     background: var(--surface);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    padding: 24px 20px;
+    padding: 16px 14px;
 }
 
 .board-detail__header {
@@ -153,6 +153,15 @@
     gap: 8px;
     font-size: 13px;
     color: var(--muted);
+}
+
+/* PC: 래퍼 div를 레이아웃에서 투명하게 → 자식들이 meta flex에 직접 참여 (단일 행) */
+.board-detail__meta-text {
+    display: contents;
+}
+
+.board-detail__meta-sub {
+    display: contents;
 }
 
 .board-detail__author {
@@ -233,7 +242,7 @@
 
 /* 댓글 */
 .comments-section {
-    margin-top: 24px;
+    margin-top: 14px;
 }
 
 .comments-section__title {
@@ -302,7 +311,7 @@
 }
 
 .comment-item {
-    padding: 14px;
+    padding: 10px 12px;
     background: #f9fafb;
     border-radius: 8px;
 }
@@ -713,6 +722,14 @@
     flex-shrink: 0;
 }
 
+.ico--download {
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E") center / contain no-repeat;
+    background: currentColor;
+    width: 14px;
+    height: 14px;
+}
+
 .ico--attach {
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E") center / contain no-repeat;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E") center / contain no-repeat;
@@ -946,6 +963,18 @@
 
 /* 태블릿 이상 */
 @media (min-width: 768px) {
+    .board-items {
+        gap: 12px;
+    }
+
+    .board-item {
+        padding: 22px;
+    }
+
+    .board-item__title {
+        font-size: 17px;
+    }
+
     .board-detail {
         padding: 32px 28px;
     }
@@ -958,16 +987,16 @@
         font-size: 15px;
     }
 
-    .board-item {
-        padding: 22px;
-    }
-
-    .board-item__title {
-        font-size: 17px;
-    }
-
     .form-textarea {
         min-height: 400px;
+    }
+
+    .comments-section {
+        margin-top: 24px;
+    }
+
+    .comment-item {
+        padding: 14px;
     }
 }
 
@@ -1065,6 +1094,33 @@
 
     .pagination--mobile {
         display: block;
+    }
+
+    /* 모바일: 아바타 오른쪽을 이름(1행) + 날짜·조회수(2행)로 분리 */
+    .board-detail__meta {
+        gap: 10px;
+    }
+
+    .board-detail__meta-text {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+    }
+
+    .board-detail__author {
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .board-detail__meta-sub {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        white-space: nowrap;
     }
 }
 
@@ -1325,6 +1381,29 @@
 
     .board-sidebar__item:last-child {
         border-bottom: none;
+    }
+
+    .board-sidebar__guide {
+        margin-top: 12px;
+        padding: 10px 16px;
+    }
+
+    .board-sidebar__guide-link {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        transition: color 0.15s;
+    }
+
+    .board-sidebar__guide-link:hover {
+        color: var(--primary);
+    }
+
+    .board-sidebar__guide-link .ico {
+        width: 14px;
+        height: 14px;
     }
 
     .board-sidebar__item:hover {
