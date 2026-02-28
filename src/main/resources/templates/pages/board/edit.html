@@ -20,7 +20,7 @@
     </th:block>
 
     <th:block th:fragment="pageBody">
-        <main class="page">
+        <main class="page board-write-page">
             <form th:action="@{/board/edit/{id}(id=${board.id})}" method="post" id="editForm" class="board-form">
                 <div class="form-group">
                     <input
@@ -47,34 +47,36 @@
                     ></textarea>
                 </div>
 
-                <!-- 첨부파일 영역 -->
-                <div class="form-group">
-                    <div class="attachment-zone" id="attachmentZone">
-                        <span class="attachment-zone__icon">📎</span>
-                        <span class="attachment-zone__text">파일을 드래그하거나 클릭하여 첨부하세요</span>
-                        <span class="attachment-zone__hint">실행파일(.exe, .sh, .bat 등) 제외, 파일당 최대 <span th:text="${maxAttachmentSizeMb}">50</span>MB</span>
-                        <input type="file" id="attachmentInput" multiple style="display:none;" />
-                    </div>
-                    <div class="attachment-list" id="attachmentList">
-                        <!-- 기존 첨부파일 -->
-                        <div th:each="attachment : ${attachments}" class="attachment-item attachment-item--existing"
-                             th:data-id="${attachment.id}">
-                            <span class="attachment-item__name" th:text="${attachment.originalName}">파일명</span>
-                            <span class="attachment-item__size" th:text="${attachment.fileSizeDisplay}">크기</span>
-                            <span th:if="${attachment.expiresAt != null}" class="attachment-expiry-info"
-                                  th:text="'~' + ${#temporals.format(attachment.expiresAt, 'yyyy-MM-dd')}">~2025-12-31</span>
-                            <button type="button" class="attachment-item__remove"
-                                    th:onclick="'removeExisting(this,' + ${attachment.id} + ')'">×</button>
-                            <input type="hidden" name="removedAttachmentIds"
-                                   th:id="'remove-hidden-' + ${attachment.id}" disabled="disabled"
-                                   th:value="${attachment.id}" />
+                <div class="board-form-bottom">
+                    <!-- 첨부파일 영역 -->
+                    <div class="form-group">
+                        <div class="attachment-zone" id="attachmentZone">
+                            <span class="attachment-zone__icon">📎</span>
+                            <span class="attachment-zone__text">파일을 드래그하거나 클릭하여 첨부하세요</span>
+                            <span class="attachment-zone__hint">실행파일(.exe, .sh, .bat 등) 제외, 파일당 최대 <span th:text="${maxAttachmentSizeMb}">50</span>MB</span>
+                            <input type="file" id="attachmentInput" multiple style="display:none;" />
+                        </div>
+                        <div class="attachment-list" id="attachmentList">
+                            <!-- 기존 첨부파일 -->
+                            <div th:each="attachment : ${attachments}" class="attachment-item attachment-item--existing"
+                                 th:data-id="${attachment.id}">
+                                <span class="attachment-item__name" th:text="${attachment.originalName}">파일명</span>
+                                <span class="attachment-item__size" th:text="${attachment.fileSizeDisplay}">크기</span>
+                                <span th:if="${attachment.expiresAt != null}" class="attachment-expiry-info"
+                                      th:text="'~' + ${#temporals.format(attachment.expiresAt, 'yyyy-MM-dd')}">~2025-12-31</span>
+                                <button type="button" class="attachment-item__remove"
+                                        th:onclick="'removeExisting(this,' + ${attachment.id} + ')'">×</button>
+                                <input type="hidden" name="removedAttachmentIds"
+                                       th:id="'remove-hidden-' + ${attachment.id}" disabled="disabled"
+                                       th:value="${attachment.id}" />
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="form-actions">
-                    <button type="button" onclick="history.back()" class="btn btn--secondary">취소</button>
-                    <button type="submit" class="btn btn--primary">수정</button>
+                    <div class="form-actions">
+                        <button type="button" onclick="history.back()" class="btn btn--secondary">취소</button>
+                        <button type="submit" class="btn btn--primary">수정</button>
+                    </div>
                 </div>
             </form>
         </main>
@@ -209,61 +211,6 @@
                     if (toolbar) toolbar.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 400);
             });
-
-            // 모바일: 키보드 올라올 때 에디터 높이를 키보드 위까지 제한
-            // 자동 스크롤 완료 후 높이 적용 (scroll 정지 감지 + 800ms 폴백)
-            (function() {
-                if (!window.visualViewport) return;
-                var editorEl = document.getElementById('editor');
-                var fallbackTimer = null;
-
-                function applyEditorHeight() {
-                    var vvh = window.visualViewport.height;
-                    // 에디터가 스크롤로 뷰포트 위로 올라간 경우 getBoundingClientRect().top이 음수가 됨.
-                    // sticky 상태인 툴바의 실제 렌더 위치를 기준으로 계산해야 정확함.
-                    var toolbar = editorEl.querySelector('.ql-toolbar');
-                    var topRef = toolbar ? toolbar.getBoundingClientRect().top : editorEl.getBoundingClientRect().top;
-                    var available = vvh - Math.max(topRef, 0) - 16;
-                    editorEl.style.height = Math.max(available, 120) + 'px';
-                }
-
-                window.visualViewport.addEventListener('resize', function() {
-                    var vvh = window.visualViewport.height;
-                    clearTimeout(fallbackTimer);
-
-                    if (vvh < window.innerHeight - 100) {
-                        // 키보드 표시 중: 자동 스크롤 완료 후 높이 적용
-                        var applied = false;
-                        var scrollTimer = null;
-
-                        function onScroll() {
-                            clearTimeout(scrollTimer);
-                            scrollTimer = setTimeout(function() {
-                                if (!applied) {
-                                    applied = true;
-                                    window.removeEventListener('scroll', onScroll);
-                                    clearTimeout(fallbackTimer);
-                                    applyEditorHeight();
-                                }
-                            }, 100);
-                        }
-
-                        window.addEventListener('scroll', onScroll);
-
-                        // 스크롤이 발생하지 않는 경우 폴백
-                        fallbackTimer = setTimeout(function() {
-                            if (!applied) {
-                                applied = true;
-                                window.removeEventListener('scroll', onScroll);
-                                applyEditorHeight();
-                            }
-                        }, 800);
-                    } else {
-                        // 키보드 숨김: 원래 높이로 복원
-                        editorEl.style.height = '';
-                    }
-                });
-            })();
 
             // 기존 내용 로드
             const existingContent = /*[[${board.content}]]*/ '';

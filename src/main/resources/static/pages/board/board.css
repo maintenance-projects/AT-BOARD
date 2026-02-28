@@ -1901,3 +1901,96 @@
         min-height: 200px !important;
     }
 }
+
+/* ============================================================
+ * 글쓰기/수정 - 모바일 전체화면 레이아웃 (dvh 기반)
+ * 원복 방법:
+ *   1. 아래 블록(@media ~ 닫는 }) 전체 삭제
+ *   2. write.html / edit.html 의 <main class="page board-write-page"> → <main class="page">
+ *   3. write.html / edit.html 의 <div class="board-form-bottom"> 래퍼 제거
+ *      (안의 첨부파일/버튼 div 들은 form 직속 자식으로 되돌릴 것)
+ * ============================================================ */
+@media (max-width: 1023px) {
+    /* 페이지 컨테이너: topbar(70px) 제외 나머지 화면을 꽉 채움 */
+    .board-write-page {
+        height: calc(100dvh - 70px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* 폼: 세로 flex로 영역 분배 */
+    .board-write-page .board-form {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        gap: 0;
+        padding: 10px 10px 0;
+    }
+
+    /* 카테고리 선택, 제목 입력: 고정 영역 */
+    .board-write-page .form-group {
+        flex-shrink: 0;
+        margin-bottom: 8px;
+    }
+
+    /* 에디터 영역: 나머지 공간 전부 차지 */
+    .board-write-page .form-group--flex {
+        flex: 1;
+        min-height: 0;
+        margin-bottom: 0;
+    }
+
+    /* Quill 에디터 컨테이너: 부모 높이에 맞게 */
+    .board-write-page .quill-editor {
+        height: 100% !important;
+        min-height: 0;
+    }
+
+    /* sticky 불필요 (페이지 자체가 overflow:hidden으로 스크롤 없음) */
+    .board-write-page .ql-toolbar.ql-snow {
+        position: static;
+        top: auto;
+    }
+
+    /* min-height 제약 제거 */
+    .board-write-page .ql-container {
+        min-height: 0 !important;
+    }
+
+    .board-write-page .ql-editor {
+        min-height: 0 !important;
+    }
+
+    /* 하단 바: 첨부파일 + 버튼 */
+    .board-write-page .board-form-bottom {
+        flex-shrink: 0;
+        border-top: 1px solid var(--line);
+        background: var(--surface, #fff);
+    }
+
+    /* 첨부파일 영역: 한 줄 compact */
+    .board-write-page .attachment-zone {
+        padding: 8px 12px;
+        flex-direction: row;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        border-bottom: none;
+        background: transparent;
+    }
+
+    .board-write-page .attachment-zone__hint {
+        display: none;
+    }
+
+    /* 버튼 영역 여백 */
+    .board-write-page .form-actions {
+        margin-top: 0;
+        padding: 8px 10px 10px;
+    }
+}
