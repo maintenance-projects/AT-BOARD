@@ -1132,6 +1132,8 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    isolation: isolate;  /* 리사이즈 오버레이 z-index 에디터 내부로 격리 */
+    overflow: hidden;    /* 오버레이가 에디터 영역 밖으로 나오지 않도록 클립 */
 }
 
 .ql-toolbar {
@@ -1162,17 +1164,17 @@
     margin: 10px 0;
 }
 
-.quill-editor .ql-toolbar {
-    border-top-left-radius: var(--radius);
-    border-top-right-radius: var(--radius);
+.board-form .ql-toolbar.ql-snow {
     background: #f8f9fa;
-    border-color: var(--border);
+    border: none !important;
+    border-radius: 0 !important;
+    position: relative;
+    z-index: 1; /* 에디터 overlay(z-index:auto 컨텍스트)보다 위에 표시 */
 }
 
-.quill-editor .ql-container {
-    border-bottom-left-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
-    border-color: var(--border);
+.board-form .ql-container.ql-snow {
+    border: none !important;
+    border-radius: 0 !important;
 }
 
 /* 게시글 상세 내용 HTML 렌더링 */

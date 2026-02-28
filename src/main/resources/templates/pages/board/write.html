@@ -98,12 +98,14 @@
                     overlay.style.cssText = 'position:absolute;box-sizing:border-box;border:2px solid #3498db;pointer-events:none;z-index:100;';
                     var handle = document.createElement('div');
                     handle.title = '드래그하여 크기 조절';
+                    handle.setAttribute('tabindex', '0');
                     handle.style.cssText = 'position:absolute;right:-10px;bottom:-10px;width:20px;height:20px;background:#3498db;cursor:se-resize;pointer-events:all;border-radius:3px;touch-action:none;';
                     overlay.appendChild(handle);
                     container.appendChild(overlay);
                     updateOverlay();
                     handle.addEventListener('mousedown', onMouseDown);
                     handle.addEventListener('touchstart', onTouchStart, { passive: false });
+                    setTimeout(function() { handle.focus(); }, 0);
                 }
 
                 function updateOverlay() {
@@ -119,6 +121,13 @@
                 function removeOverlay() {
                     if (overlay) { overlay.remove(); overlay = null; }
                     activeImg = null;
+                }
+
+                // 방법 1: 에디터 스크롤 시 오버레이 재동기화
+                editorEl.addEventListener('scroll', updateOverlay);
+                // 방법 1: 키보드 올라오거나 내려갈 때 오버레이 재동기화
+                if (window.visualViewport) {
+                    window.visualViewport.addEventListener('resize', updateOverlay);
                 }
 
                 function onMouseDown(e) {
@@ -147,6 +156,8 @@
                     e.stopPropagation();
                     startX = e.touches[0].clientX;
                     startW = activeImg.getBoundingClientRect().width;
+                    // 방법 3: 리사이즈 중 에디터 스크롤 잠금 (오버레이 틀어짐 방지)
+                    editorEl.style.overflowY = 'hidden';
                     document.addEventListener('touchmove', onTouchMove, { passive: false });
                     document.addEventListener('touchend', onTouchEnd);
                 }
@@ -162,11 +173,21 @@
                 function onTouchEnd() {
                     document.removeEventListener('touchmove', onTouchMove);
                     document.removeEventListener('touchend', onTouchEnd);
+                    // 방법 3: 스크롤 복원 + 위치 재동기화
+                    editorEl.style.overflowY = '';
+                    updateOverlay();
                 }
 
                 editorEl.addEventListener('click', function(e) {
                     if (e.target.tagName === 'IMG') {
+                        // 1. 이미지 아래로 Quill 커서 이동 (에디터 포커스 포함)
+                        var blot = Quill.find(e.target);
+                        if (blot) {
+                            quill.setSelection(quill.getIndex(blot) + 1, 0, 'user');
+                        }
+                        // 2. 크기조절 프레임 표시
                         showOverlay(e.target);
+                        // 3. 핸들로 포커스 이동 (showOverlay 내 setTimeout과 별개로 보장)
                     } else if (!overlay || !overlay.contains(e.target)) {
                         removeOverlay();
                     }
@@ -239,7 +260,14 @@
                         pendingImages.push({ dataUrl: dataUrl, file: file });
                         var range = quill.getSelection(true);
                         quill.insertEmbed(range.index, 'image', dataUrl);
-                        quill.setSelection(range.index + 1);
+                        quill.setSelection(range.index + 1, 0, 'user');
+                        // 이미지 아랫부분으로 스크롤
+                        var bounds = quill.getBounds(range.index);
+                        var imgBottom = bounds.top + bounds.height;
+                        var editorHeight = quill.root.clientHeight;
+                        if (imgBottom > quill.root.scrollTop + editorHeight) {
+                            quill.root.scrollTop = imgBottom - editorHeight + 20;
+                        }
                     };
                     reader.readAsDataURL(file);
                 };
