@@ -1911,6 +1911,14 @@
  *      (안의 첨부파일/버튼 div 들은 form 직속 자식으로 되돌릴 것)
  * ============================================================ */
 @media (max-width: 1023px) {
+    /* 키보드 올라올 때 브라우저가 window 자체를 스크롤하는 것을 차단
+       (기존 내용 있는 edit 페이지에서 커서 위치로 window 스크롤되는 문제 방지) */
+    html:has(.board-write-page),
+    body:has(.board-write-page) {
+        overflow: hidden;
+        height: 100dvh;
+    }
+
     /* 페이지 컨테이너: topbar(70px) 제외 나머지 화면을 꽉 채움 */
     .board-write-page {
         height: calc(100dvh - 70px);
