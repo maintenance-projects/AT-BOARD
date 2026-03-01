@@ -1996,45 +1996,154 @@
 }
 
 /* ============================================================
- * 글쓰기/수정 - 모바일 전체화면 레이아웃 (dvh 기반)
- * 원복 방법:
- *   1. 아래 블록(@media ~ 닫는 }) 전체 삭제
- *   2. write.html / edit.html 의 <main class="page board-write-page"> → <main class="page">
- *   3. write.html / edit.html 의 <div class="board-form-bottom"> 래퍼 제거
- *      (안의 첨부파일/버튼 div 들은 form 직속 자식으로 되돌릴 것)
+ * 글쓰기/수정 - 새 모바일 UI (topbar--write + write-field 구조)
+ * ============================================================ */
+
+/* 글쓰기 탑바: [X] 글쓰기 [등록] */
+.topbar--write {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+    position: relative;
+}
+
+.topbar--write .topbar__title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* X (뒤로가기) 버튼 - 모바일에서만 표시 */
+.topbar__btn--back {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 20px;
+    color: var(--text, #111);
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 등록/수정 텍스트 버튼 - 모바일에서만 표시 */
+.topbar__btn--submit {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 8px;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary, #3b82f6);
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+}
+
+.topbar__btn--submit:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+/* write-field: 입력 섹션 공통 */
+.write-field {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 섹션 구분선 */
+.write-divider {
+    height: 1px;
+    background: var(--line, #e5e7eb);
+    flex-shrink: 0;
+}
+
+/* PC: 구분선 숨김 (gap으로 간격 표현) */
+@media (min-width: 1024px) {
+    .write-divider {
+        display: none;
+    }
+}
+
+/* 카테고리 select: no-border, compact */
+.write-select {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    color: var(--muted, #6b7280);
+    padding: 8px 14px;
+    width: auto;
+    max-width: 100%;
+    align-self: flex-start;
+    cursor: pointer;
+    font-family: var(--font);
+}
+
+/* 제목 input: no-border, 큰 폰트 */
+.write-title-input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 18px;
+    color: var(--text, #111);
+    padding: 12px 14px;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--font);
+}
+
+.write-title-input::placeholder {
+    color: var(--muted, #9ca3af);
+    font-weight: 400;
+}
+
+/* PC용 하단 버튼 (취소/등록) */
+.form-actions--pc {
+    display: flex;
+    gap: 10px;
+    padding: 16px 0 0;
+    justify-content: flex-end;
+}
+
+/* ============================================================
+ * 글쓰기/수정 - 모바일 전체화면 레이아웃
  * ============================================================ */
 @media (max-width: 1023px) {
-    /* 키보드 올라올 때 브라우저가 window 자체를 스크롤하는 것을 차단
-       (기존 내용 있는 edit 페이지에서 커서 위치로 window 스크롤되는 문제 방지) */
+    /* 키보드 올라올 때 window 스크롤 차단 */
     html:has(.board-write-page),
     body:has(.board-write-page) {
         overflow: hidden;
         height: 100dvh;
     }
 
-    /* write/edit 페이지: 헤더 기본 숨김 (height: 0), scrollTop=0일 때만 슬라이드 표시
-       헤더와 board-write-page 동시 transition → 레이아웃 shift 없이 자연스럽게 */
+    /* 헤더는 항상 표시 (70px 고정) */
     html:has(.board-write-page) .app-header {
-        height: 0;
-        overflow: hidden;
-        border-bottom: none;
-        transition: height 0.25s ease;
+        height: 70px !important;
+        overflow: visible !important;
+        border-bottom: 1px solid var(--line) !important;
+        transition: none !important;
     }
 
-    html:has(.board-write-page) .app-header.--header-visible {
-        height: 70px;
-        border-bottom: 1px solid var(--line);
+    /* 탑바 X, 등록 버튼 모바일에서 표시 */
+    .topbar__btn--back,
+    .topbar__btn--submit {
+        display: flex;
     }
 
-    /* 헤더 표시 시 board-write-page 높이 동시 조정 */
-    html:has(.board-write-page):has(.app-header.--header-visible) .board-write-page {
-        height: calc(100dvh - 70px);
-    }
-
-    /* 헤더 숨김 시 전체 높이, 헤더와 동시 transition */
+    /* board-write-page: 헤더 아래 나머지 공간 */
     .board-write-page {
-        height: 100dvh;
-        transition: height 0.25s ease;
+        height: calc(100dvh - 70px);
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -2043,26 +2152,32 @@
         box-sizing: border-box;
     }
 
-    /* 폼: 세로 flex로 영역 분배 */
+    /* 폼: padding 없이 꽉 채움 */
     .board-write-page .board-form {
         flex: 1;
         min-height: 0;
         overflow: hidden;
         gap: 0;
-        padding: 10px 10px 0;
+        padding: 0;
     }
 
-    /* 카테고리 선택, 제목 입력: 고정 영역 */
-    .board-write-page .form-group {
+    /* 카테고리, 제목: 고정 영역 */
+    .board-write-page .write-field--category,
+    .board-write-page .write-field--title {
         flex-shrink: 0;
-        margin-bottom: 8px;
     }
 
-    /* 에디터 영역: 나머지 공간 전부 차지 */
-    .board-write-page .form-group--flex {
+    /* 에디터: 나머지 공간 전부 */
+    .board-write-page .write-field--editor {
         flex: 1;
         min-height: 0;
-        margin-bottom: 0;
+    }
+
+    /* 하단 첨부파일 영역: 고정 */
+    .board-write-page .write-field--attachment {
+        flex-shrink: 0;
+        border-top: 1px solid var(--line);
+        background: var(--surface, #fff);
     }
 
     /* Quill 에디터 컨테이너: 부모 높이에 맞게 */
@@ -2071,7 +2186,7 @@
         min-height: 0;
     }
 
-    /* sticky 불필요 (페이지 자체가 overflow:hidden으로 스크롤 없음) */
+    /* sticky 불필요 (페이지 자체가 overflow:hidden) */
     .board-write-page .ql-toolbar.ql-snow {
         position: static;
         top: auto;
@@ -2086,32 +2201,59 @@
         min-height: 0 !important;
     }
 
-    /* 하단 바: 첨부파일 + 버튼 */
-    .board-write-page .board-form-bottom {
-        flex-shrink: 0;
-        border-top: 1px solid var(--line);
-        background: var(--surface, #fff);
-    }
-
     /* 첨부파일 영역: 한 줄 compact */
     .board-write-page .attachment-zone {
-        padding: 8px 12px;
+        padding: 5px 12px;
         flex-direction: row;
         border-radius: 0;
-        border-left: none;
-        border-right: none;
-        border-top: none;
-        border-bottom: none;
+        border: none;
         background: transparent;
+        gap: 6px;
+        justify-content: flex-start;
+        min-height: 0;
+    }
+
+    .board-write-page .attachment-zone__icon {
+        font-size: 16px;
+        line-height: 1;
+    }
+
+    .board-write-page .attachment-zone__text {
+        font-size: 12px;
+        color: var(--muted);
     }
 
     .board-write-page .attachment-zone__hint {
         display: none;
     }
 
-    /* 버튼 영역 여백 */
-    .board-write-page .form-actions {
-        margin-top: 0;
-        padding: 8px 10px 10px;
+    /* 첨부파일 목록: 최대 높이 제한 + 스크롤 */
+    .board-write-page .attachment-list:not(.--collapsed) {
+        max-height: 110px;
+        overflow-y: auto;
+    }
+
+    /* PC용 버튼 영역 모바일에서 숨김 */
+    .board-write-page .form-actions--pc {
+        display: none;
+    }
+
+    /* 기존 form-group 클래스 충돌 방지 */
+    .board-write-page .form-group--flex {
+        flex: 1;
+        min-height: 0;
+        margin-bottom: 0;
+    }
+
+    /* write-select: no-border */
+    .write-select {
+        font-size: 13px;
+        padding: 10px 14px;
+    }
+
+    /* write-title-input: no-border */
+    .write-title-input {
+        font-size: 18px;
+        padding: 12px 14px;
     }
 }

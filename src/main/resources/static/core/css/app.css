@@ -24,8 +24,7 @@
     font-size: 12px;
 }
 
-/* iOS Safari 자동 확대 방지: font-size < 16px 이면 포커스 시 확대됨
-   !important 필요 — 각 페이지 CSS의 클래스 선택자가 더 높은 우선순위를 가짐 */
+/* iOS Safari 자동 확대 방지: font-size < 16px 이면 포커스 시 확대됨 */
 @media (max-width: 1023px) {
     input,
     textarea,
@@ -33,6 +32,7 @@
         font-size: 16px !important;
     }
 }
+
 
 html {
     scroll-padding-top: 78px; /* sticky 헤더 높이 보정 */
