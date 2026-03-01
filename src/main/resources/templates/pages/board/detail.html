@@ -59,8 +59,13 @@
                 </div>
 
                 <!-- 첨부파일 -->
-                <div class="attachment-download-section" th:if="${attachments != null && !attachments.isEmpty()}">
-                    <h4 class="attachment-download-section__title">첨부파일 <span th:text="${attachments.size()}">0</span>개</h4>
+                <div class="attachment-download-section --open" th:if="${attachments != null && !attachments.isEmpty()}">
+                    <h4 class="attachment-download-section__title" onclick="if(window.innerWidth<1024)this.closest('.attachment-download-section').classList.toggle('--open')">
+                        <span>첨부파일 <span th:text="${attachments.size()}">0</span>개</span>
+                        <button type="button" class="attachment-accordion-btn">
+                            <span class="attachment-accordion-chevron"></span>
+                        </button>
+                    </h4>
                     <ul class="attachment-download-list">
                         <li th:each="attachment : ${attachments}"
                             th:class="${attachment.isExpired()} ? 'attachment-download-item attachment-download-item--expired' : 'attachment-download-item'">
@@ -69,7 +74,8 @@
                             <a th:unless="${attachment.isExpired()}"
                                th:href="@{/board/attachments/{id}/download(id=${attachment.id})}"
                                class="attachment-download-item__name"
-                               th:text="${attachment.originalName}">파일명</a>
+                               th:text="${attachment.originalName}"
+                               onclick="this.href=this.href.split('?')[0]+'?t='+Date.now()">파일명</a>
                             <!-- 만료됨 -->
                             <span th:if="${attachment.isExpired()}"
                                   class="attachment-download-item__name attachment-download-item__name--expired"

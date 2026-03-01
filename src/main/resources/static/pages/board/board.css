@@ -1712,6 +1712,19 @@
     color: var(--text-secondary, #64748b);
 }
 
+.attachment-zone__text--mobile {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .attachment-zone__text--pc {
+        display: none;
+    }
+    .attachment-zone__text--mobile {
+        display: inline;
+    }
+}
+
 .attachment-zone__hint {
     font-size: 12px;
     color: var(--text-muted, #94a3b8);
@@ -1803,6 +1816,84 @@
 .attachment-item__remove:hover {
     background: #fee2e2;
     color: #ef4444;
+}
+
+/* 첨부파일 아코디언 */
+.attachment-accordion-btn {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.attachment-accordion-btn:active {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.attachment-accordion-chevron {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 8l-7 7 1.41 1.41L12 10.83l5.59 5.58L19 15z'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 8l-7 7 1.41 1.41L12 10.83l5.59 5.58L19 15z'/%3E%3C/svg%3E") center / contain no-repeat;
+    background: var(--muted);
+    transition: transform 0.2s ease;
+}
+
+/* 글쓰기/수정 첨부파일 목록 아코디언 헤더 (PC에서 숨김) */
+.attachment-list-header {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .attachment-list-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 12px 2px;
+        border-top: 1px solid var(--line);
+    }
+
+    .attachment-list-header--hidden {
+        display: none !important;
+    }
+
+    .attachment-list-header__count {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    .attachment-list.--collapsed {
+        display: none;
+    }
+
+    .attachment-list-header.--collapsed .attachment-accordion-chevron {
+        transform: rotate(180deg);
+    }
+
+    /* 상세 페이지 첨부파일 아코디언 */
+    .attachment-download-section__title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .attachment-download-section:not(.--open) .attachment-download-list {
+        display: none;
+    }
+
+    .attachment-download-section:not(.--open) .attachment-accordion-chevron {
+        transform: rotate(180deg);
+    }
 }
 
 /* 첨부파일 다운로드 섹션 (상세보기) */
@@ -1921,9 +2012,29 @@
         height: 100dvh;
     }
 
-    /* 페이지 컨테이너: topbar(70px) 제외 나머지 화면을 꽉 채움 */
-    .board-write-page {
+    /* write/edit 페이지: 헤더 기본 숨김 (height: 0), scrollTop=0일 때만 슬라이드 표시
+       헤더와 board-write-page 동시 transition → 레이아웃 shift 없이 자연스럽게 */
+    html:has(.board-write-page) .app-header {
+        height: 0;
+        overflow: hidden;
+        border-bottom: none;
+        transition: height 0.25s ease;
+    }
+
+    html:has(.board-write-page) .app-header.--header-visible {
+        height: 70px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    /* 헤더 표시 시 board-write-page 높이 동시 조정 */
+    html:has(.board-write-page):has(.app-header.--header-visible) .board-write-page {
         height: calc(100dvh - 70px);
+    }
+
+    /* 헤더 숨김 시 전체 높이, 헤더와 동시 transition */
+    .board-write-page {
+        height: 100dvh;
+        transition: height 0.25s ease;
         display: flex;
         flex-direction: column;
         overflow: hidden;
