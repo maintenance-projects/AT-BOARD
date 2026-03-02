@@ -2204,15 +2204,32 @@
         min-height: 0 !important;
     }
 
-    /* 툴바 아이콘 2px 확대 (모바일) */
+    /* 툴바 버튼 크기·정렬 (모바일) */
     .board-write-page .ql-toolbar.ql-snow button {
-        width: 18px;
-        height: 18px;
+        width: 26px;
+        height: 26px;
+        margin: 2px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .board-write-page .ql-toolbar.ql-snow button svg {
-        width: 18px;
-        height: 18px;
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+    }
+
+    /* 색상 피커 패딩 조정 (모바일) */
+    .board-write-page .ql-toolbar.ql-snow .ql-color-picker .ql-picker-label {
+        padding: 0 2px;
+    }
+
+    /* 색상 피커 드롭다운 화면 안쪽으로 (왼쪽 방향으로 열리도록) */
+    .board-write-page .ql-toolbar.ql-snow .ql-color-picker .ql-picker-options {
+        right: 0;
+        left: auto;
     }
 
     /* 첨부파일 영역: 한 줄 compact */
