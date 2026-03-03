@@ -22,7 +22,8 @@
                 <a th:if="${selectedCategory == null || selectedCategory.adminOnly == null || !selectedCategory.adminOnly}"
                    th:href="@{/board/write(categoryId=${selectedCategory != null ? selectedCategory.id : ''})}"
                    class="topbar__btn"
-                   aria-label="글쓰기">
+                   aria-label="글쓰기"
+                   onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">
                     <span class="ico ico--write" aria-hidden="true"></span>
                 </a>
             </div>

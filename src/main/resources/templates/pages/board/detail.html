@@ -22,7 +22,8 @@
                     <span class="ico ico--menu" aria-hidden="true"></span>
                 </button>
                 <div id="actionMenu" class="action-menu" style="display: none;">
-                    <a th:href="@{/board/edit/{id}(id=${board.id})}" class="action-menu__item">수정</a>
+                    <a th:href="@{/board/edit/{id}(id=${board.id})}" class="action-menu__item"
+                       onclick="this.href=this.href.split('?t=')[0]+'?t='+Date.now()">수정</a>
                     <button type="button" onclick="deletePost()" class="action-menu__item action-menu__item--danger">삭제</button>
                 </div>
             </div>
