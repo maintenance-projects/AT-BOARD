@@ -2073,10 +2073,6 @@
     .write-divider {
         display: none;
     }
-
-    .write-title-input {
-        border-bottom: 1px solid #ddd;
-    }
 }
 
 /* 카테고리 select: no-border, compact */
@@ -2110,6 +2106,12 @@
 .write-title-input::placeholder {
     color: var(--muted, #9ca3af);
     font-weight: 400;
+}
+
+@media (min-width: 1024px) {
+    .write-title-input {
+        border-bottom: 1px solid #ddd;
+    }
 }
 
 /* PC용 하단 버튼 (취소/등록) */
