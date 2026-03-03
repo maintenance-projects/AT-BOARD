@@ -1662,7 +1662,7 @@
 .search-history__list {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 0 0 4px;
 }
 .search-history__item {
     display: flex;

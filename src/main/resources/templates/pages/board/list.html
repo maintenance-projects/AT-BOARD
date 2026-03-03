@@ -598,7 +598,7 @@
             function updatePanelHeight() {
                 var panel = document.getElementById('searchPanel');
                 if (panel && panel.classList.contains('search-panel--open')) {
-                    panel.style.maxHeight = panel.scrollHeight + 'px';
+                    panel.style.maxHeight = (panel.scrollHeight + 8) + 'px';
                 }
             }
 
@@ -668,7 +668,7 @@
                 if (!wasOpen) {
                     renderHistory();
                     _origToggleSearch();
-                    panel.style.maxHeight = panel.scrollHeight + 'px';
+                    panel.style.maxHeight = (panel.scrollHeight + 8) + 'px';
                 } else {
                     panel.style.maxHeight = '';
                     _origToggleSearch();
@@ -690,7 +690,7 @@
             if (document.getElementById('searchPanel').classList.contains('search-panel--open')) {
                 renderHistory();
                 var panel = document.getElementById('searchPanel');
-                panel.style.maxHeight = panel.scrollHeight + 'px';
+                panel.style.maxHeight = (panel.scrollHeight + 8) + 'px';
             }
         })();
 
