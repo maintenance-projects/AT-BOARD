@@ -2,11 +2,10 @@ package kr.co.ultari.at_board.service;
 
 import kr.co.ultari.at_board.model.primary.BoardAttachment;
 import kr.co.ultari.at_board.repository.primary.BoardAttachmentRepository;
+import kr.co.ultari.at_board.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -14,11 +13,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -35,9 +29,7 @@ public class BoardAttachmentService {
 
     private final BoardAttachmentRepository attachmentRepository;
     private final AppSettingService appSettingService;
-
-    @Value("${file.upload.path:uploads}")
-    private String uploadPath;
+    private final FileStorageService fileStorageService;
 
     /**
      * 파일 업로드 후 DB에 임시 레코드(boardId=null) 생성 - 일반 사용자용 (용량·확장자 제한 적용)
@@ -101,20 +93,16 @@ public class BoardAttachmentService {
     private BoardAttachment saveFile(MultipartFile file, String originalFilename, String extension,
                                      LocalDateTime expiresAt) throws IOException {
         String dateFolder = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-        Path attachDir = Paths.get(uploadPath, "attach", dateFolder);
-        Files.createDirectories(attachDir);
-
         String storedName = UUID.randomUUID().toString() + (extension.isEmpty() ? "" : "." + extension);
-        Path filePath = attachDir.resolve(storedName);
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        String relativePath = "attach/" + dateFolder + "/" + storedName;
 
-        String relativeFilePath = "attach/" + dateFolder + "/" + storedName;
+        fileStorageService.uploadAttachment(file, relativePath);
 
         BoardAttachment attachment = BoardAttachment.builder()
                 .boardId(null)
                 .originalName(originalFilename)
                 .storedName(storedName)
-                .filePath(relativeFilePath)
+                .filePath(relativePath)
                 .fileSize(file.getSize())
                 .mimeType(file.getContentType())
                 .expiresAt(expiresAt)
@@ -124,7 +112,7 @@ public class BoardAttachmentService {
             return attachmentRepository.save(attachment);
         } catch (Exception e) {
             // DB 저장 실패 시 업로드된 파일 정리
-            deleteFile(relativeFilePath);
+            fileStorageService.deleteFile(relativePath);
             throw e;
         }
     }
@@ -161,7 +149,7 @@ public class BoardAttachmentService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    deleteFile(filePath);
+                    fileStorageService.deleteFile(filePath);
                 }
             });
         });
@@ -181,7 +169,7 @@ public class BoardAttachmentService {
             @Override
             public void afterCommit() {
                 for (String path : filePaths) {
-                    deleteFile(path);
+                    fileStorageService.deleteFile(path);
                 }
             }
         });
@@ -195,29 +183,15 @@ public class BoardAttachmentService {
         if (attachment == null) {
             return null;
         }
-
         try {
-            Path filePath = Paths.get(uploadPath).resolve(attachment.getFilePath());
-            Resource resource = new UrlResource(filePath.toUri());
-            if (resource.exists() && resource.isReadable()) {
-                return resource;
-            }
-        } catch (MalformedURLException e) {
-            log.error("Invalid file path: {}", attachment.getFilePath(), e);
+            return fileStorageService.loadFile(attachment.getFilePath());
+        } catch (IOException e) {
+            log.error("Failed to load file: {}", attachment.getFilePath(), e);
+            return null;
         }
-        return null;
     }
 
     public BoardAttachment getById(Long id) {
         return attachmentRepository.findById(id).orElse(null);
-    }
-
-    private void deleteFile(String relativeFilePath) {
-        try {
-            Path filePath = Paths.get(uploadPath).resolve(relativeFilePath);
-            Files.deleteIfExists(filePath);
-        } catch (IOException e) {
-            log.error("Failed to delete file: {}", relativeFilePath, e);
-        }
     }
 }

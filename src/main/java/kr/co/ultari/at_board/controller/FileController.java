@@ -3,6 +3,7 @@ package kr.co.ultari.at_board.controller;
 import kr.co.ultari.at_board.model.primary.BoardAttachment;
 import kr.co.ultari.at_board.service.AppSettingService;
 import kr.co.ultari.at_board.service.BoardAttachmentService;
+import kr.co.ultari.at_board.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,13 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -31,33 +27,13 @@ public class FileController {
 
     private final BoardAttachmentService boardAttachmentService;
     private final AppSettingService appSettingService;
+    private final FileStorageService fileStorageService;
 
-    @Value("${file.upload.path:uploads}")
-    private String uploadPath;
-
-    @Value("${file.upload.max-size:10485760}") // 기본 10MB
+    @Value("${file.upload.max-size:10485760}")
     private long maxFileSize;
 
     private static final String[] ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"};
     private static final String[] ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"};
-
-    /**
-     * 애플리케이션 시작 시 업로드 폴더 생성
-     */
-    @PostConstruct
-    public void init() {
-        try {
-            Path uploadDir = Paths.get(uploadPath);
-            if (!Files.exists(uploadDir)) {
-                Files.createDirectories(uploadDir);
-                log.info("Upload directory created: {}", uploadDir.toAbsolutePath());
-            } else {
-                log.info("Upload directory already exists: {}", uploadDir.toAbsolutePath());
-            }
-        } catch (IOException e) {
-            log.error("Failed to create upload directory: {}", uploadPath, e);
-        }
-    }
 
     @PostMapping("/image")
     public ResponseEntity<Map<String, Object>> uploadImage(
@@ -123,20 +99,13 @@ public class FileController {
                 return ResponseEntity.badRequest().body(error);
             }
 
-            // 업로드 디렉토리 생성 (날짜별 폴더)
+            // 저장 경로 생성 (날짜별 폴더 + 고유 파일명)
             String dateFolder = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-            Path uploadDir = Paths.get(uploadPath, "imgs", dateFolder);
-            Files.createDirectories(uploadDir);
-
-            // 고유 파일명 생성
             String uniqueFilename = UUID.randomUUID().toString() + extension;
-            Path filePath = uploadDir.resolve(uniqueFilename);
+            String relativePath = "imgs/" + dateFolder + "/" + uniqueFilename;
 
-            // 파일 저장
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            // 웹 경로 생성
-            String webPath = "/uploads/imgs/" + dateFolder + "/" + uniqueFilename;
+            // 파일 저장 (로컬 또는 원격)
+            String webPath = fileStorageService.uploadImage(file, relativePath);
 
             response.put("url", webPath);
             response.put("filename", originalFilename);
