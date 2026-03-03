@@ -1654,9 +1654,10 @@
     background: #f3f4f6;
     color: var(--text);
 }
-.search-history__close {
-    font-size: 14px;
-    padding: 1px 4px;
+.search-history__divider {
+    color: var(--border);
+    font-size: 12px;
+    user-select: none;
 }
 .search-history__list {
     list-style: none;
