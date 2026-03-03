@@ -2073,6 +2073,10 @@
     .write-divider {
         display: none;
     }
+
+    .write-title-input {
+        border-bottom: 1px solid #ddd;
+    }
 }
 
 /* 카테고리 select: no-border, compact */
