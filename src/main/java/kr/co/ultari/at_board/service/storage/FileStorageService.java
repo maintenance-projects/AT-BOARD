@@ -33,6 +33,16 @@ public interface FileStorageService {
     Resource loadFile(String relativePath) throws IOException;
 
     /**
+     * 리사이즈 이미지 로드 (캐시 기반)
+     * JPG/PNG만 리사이즈, GIF/WebP는 원본 반환.
+     * 첫 요청 시 리사이즈 후 캐시 저장, 이후 캐시 파일 서빙.
+     *
+     * @param relativePath 원본 상대 경로 (예: imgs/2024/01/01/uuid.jpg)
+     * @param maxWidth     최대 너비 (픽셀)
+     */
+    Resource loadResized(String relativePath, int maxWidth) throws IOException;
+
+    /**
      * 파일 삭제
      *
      * @param relativePath 상대 경로

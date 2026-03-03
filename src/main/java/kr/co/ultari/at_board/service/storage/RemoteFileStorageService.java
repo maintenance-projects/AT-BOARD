@@ -77,6 +77,26 @@ public class RemoteFileStorageService implements FileStorageService {
     }
 
     @Override
+    public Resource loadResized(String relativePath, int maxWidth) throws IOException {
+        // 업무망 InternalFileController에 ?w= 파라미터로 전달 → 업무망에서 리사이즈 + 캐시
+        String url = remoteBaseUrl + "/internal/files/serve?path=" + relativePath + "&w=" + maxWidth;
+        try {
+            HttpHeaders headers = buildHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            ResponseEntity<byte[]> response =
+                    fileRestTemplate.exchange(url, HttpMethod.GET, entity, byte[].class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return new ByteArrayResource(response.getBody());
+            }
+            log.warn("Remote resized file not found: {} w={}", relativePath, maxWidth);
+            return null;
+        } catch (Exception e) {
+            log.error("Failed to load remote resized file: {} w={}", relativePath, maxWidth, e);
+            return null;
+        }
+    }
+
+    @Override
     public void deleteFile(String relativePath) {
         String url = remoteBaseUrl + "/internal/files/delete?path=" + relativePath;
         try {

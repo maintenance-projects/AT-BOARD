@@ -70,10 +70,12 @@ public class InternalFileController {
     /**
      * 파일 서빙
      * @param path 상대 경로 (예: imgs/2024/01/01/uuid.jpg)
+     * @param width 최대 너비 (선택, 있으면 리사이즈 캐시 반환)
      */
     @GetMapping("/serve")
     public ResponseEntity<Resource> serveFile(
             @RequestParam("path") String path,
+            @RequestParam(value = "w", required = false) Integer width,
             HttpServletRequest request) throws IOException {
 
         if (!checkSecret(request)) {
@@ -83,7 +85,9 @@ public class InternalFileController {
             return ResponseEntity.badRequest().build();
         }
 
-        Resource resource = fileStorageService.loadFile(path);
+        Resource resource = (width != null)
+                ? fileStorageService.loadResized(path, width)
+                : fileStorageService.loadFile(path);
         if (resource == null) {
             return ResponseEntity.notFound().build();
         }

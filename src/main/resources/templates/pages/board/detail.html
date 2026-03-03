@@ -335,7 +335,13 @@
                 if (contentImgs.length === 0) return;
 
                 contentImgs.forEach(function(img, i) {
-                    srcs.push(img.src);
+                    // 원본 URL (쿼리스트링 제거) → 이미지 뷰어에서 원본 로드
+                    var originalSrc = img.src.split('?')[0];
+                    srcs.push(originalSrc);
+                    // /api/files/images/ 경로 이미지만 썸네일로 교체 (상세보기 데이터 절약)
+                    if (originalSrc.indexOf('/api/files/images/') >= 0) {
+                        img.src = originalSrc + '?w=1200';
+                    }
                     img.style.cursor = 'zoom-in';
                     img.addEventListener('click', function() { openViewer(i); });
                 });
