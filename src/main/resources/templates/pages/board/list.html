@@ -660,13 +660,14 @@
                 addToHistory(keyword);
             });
 
-            // toggleSearchPanel 오버라이드: 열릴 때 히스토리 표시 + 높이 동적 조절
+            // toggleSearchPanel 오버라이드: 열릴 때 키워드 없을 때만 히스토리 표시
             var _origToggleSearch = window.toggleSearchPanel;
             window.toggleSearchPanel = function() {
                 var panel = document.getElementById('searchPanel');
                 var wasOpen = panel.classList.contains('search-panel--open');
                 if (!wasOpen) {
-                    renderHistory();
+                    var kw = document.getElementById('searchKeywordInput').value;
+                    if (!kw || !kw.trim()) renderHistory();
                     _origToggleSearch();
                     panel.style.maxHeight = (panel.scrollHeight + 8) + 'px';
                 } else {
@@ -674,6 +675,11 @@
                     _origToggleSearch();
                 }
             };
+
+            // 입력창 클릭 or 입력 시 히스토리 표시
+            var searchInput = document.getElementById('searchKeywordInput');
+            searchInput.addEventListener('focus', renderHistory);
+            searchInput.addEventListener('input', renderHistory);
 
             window.clearAllSearchHistory = function() {
                 saveHistory([]);
@@ -686,11 +692,14 @@
                 updatePanelHeight();
             };
 
-            // 검색 중이라 패널이 이미 열려있는 경우
+            // 검색 결과 표시 중(키워드 있음)에는 히스토리 숨김, 없으면 표시
             if (document.getElementById('searchPanel').classList.contains('search-panel--open')) {
-                renderHistory();
-                var panel = document.getElementById('searchPanel');
-                panel.style.maxHeight = (panel.scrollHeight + 8) + 'px';
+                var initKw = document.getElementById('searchKeywordInput').value;
+                if (!initKw || !initKw.trim()) {
+                    renderHistory();
+                    var panel = document.getElementById('searchPanel');
+                    panel.style.maxHeight = (panel.scrollHeight + 8) + 'px';
+                }
             }
         })();
 
