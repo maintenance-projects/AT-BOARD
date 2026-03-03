@@ -1634,7 +1634,13 @@
     color: var(--muted);
     font-weight: 500;
 }
-.search-history__clear-all {
+.search-history__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.search-history__clear-all,
+.search-history__close {
     font-size: 12px;
     color: var(--muted);
     background: none;
@@ -1643,9 +1649,14 @@
     padding: 2px 4px;
     border-radius: 4px;
 }
-.search-history__clear-all:hover {
+.search-history__clear-all:hover,
+.search-history__close:hover {
     background: #f3f4f6;
     color: var(--text);
+}
+.search-history__close {
+    font-size: 14px;
+    padding: 1px 4px;
 }
 .search-history__list {
     list-style: none;
