@@ -340,10 +340,32 @@
                 }
             });
 
+            // 에디터 포커스 시 제목 접기 (모바일)
+            var _collapseTimer = null;
+            var _topCollapsed = false;
+
+            function collapseTopFields() {
+                if (_topCollapsed) return;
+                _topCollapsed = true;
+                var titleEl = document.querySelector('.write-field--title');
+                if (titleEl) titleEl.classList.add('write-field--collapsed');
+                setTimeout(adjustEditorHeight, 260);
+            }
+
+            function restoreTopFields() {
+                if (!_topCollapsed) return;
+                _topCollapsed = false;
+                var titleEl = document.querySelector('.write-field--title');
+                if (titleEl) titleEl.classList.remove('write-field--collapsed');
+                setTimeout(adjustEditorHeight, 260);
+            }
+
             // 에디터 포커스 시 레이아웃 재계산 + 브라우저 자동 스크롤 방지
             // edit.html은 카테고리 없이 에디터가 더 위에 위치해 auto-scroll이 더 강하게 발생
             quill.root.addEventListener('focus', function() {
                 if (window.innerWidth >= 1024) return;
+                clearTimeout(_collapseTimer);
+                collapseTopFields();
                 adjustEditorHeight();
 
                 // 키보드 애니메이션 기간(~600ms) 동안 window scroll 이벤트마다 즉시 리셋
@@ -358,6 +380,26 @@
                     adjustEditorHeight();
                 }, 600);
             });
+
+            quill.root.addEventListener('blur', function() {
+                if (window.innerWidth >= 1024) return;
+                _collapseTimer = setTimeout(restoreTopFields, 300);
+            });
+
+            // 키보드 내릴 때 복원 / 키보드 다시 올라올 때 접기
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', function() {
+                    if (window.innerWidth >= 1024) return;
+                    var vvh = window.visualViewport.height;
+                    var isKeyboardUp = (window.innerHeight - vvh > 150) || (_baseVvh - vvh > 150);
+                    if (!isKeyboardUp) {
+                        restoreTopFields();
+                    } else if (quill.hasFocus()) {
+                        clearTimeout(_collapseTimer);
+                        collapseTopFields();
+                    }
+                });
+            }
 
             // 첨부파일 영역 크기 변화 자동 감지 (파일 추가/삭제/아코디언 토글 모두 대응)
             if (window.innerWidth < 1024 && window.ResizeObserver) {

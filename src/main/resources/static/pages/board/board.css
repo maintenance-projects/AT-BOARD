@@ -2204,6 +2204,15 @@
         min-height: 0 !important;
     }
 
+    /* 툴바 그룹 간격 축소 + 헤더 피커 폭 축소 → 이미지 버튼 줄바꿈 방지 */
+    .board-write-page .ql-toolbar.ql-snow .ql-formats {
+        margin-right: 6px;
+    }
+
+    .board-write-page .ql-toolbar.ql-snow .ql-picker.ql-header {
+        width: 80px;
+    }
+
     /* 툴바 버튼 크기·정렬 (모바일) */
     .board-write-page .ql-toolbar.ql-snow button {
         width: 26px;
@@ -2298,5 +2307,39 @@
     .write-title-input {
         font-size: 18px;
         padding: 12px 14px;
+    }
+
+    /* 에디터 스크롤바 항상 표시 (Android) */
+    .board-write-page .ql-editor {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    }
+
+    .board-write-page .ql-editor::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .board-write-page .ql-editor::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .board-write-page .ql-editor::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 2px;
+    }
+
+    /* 에디터 포커스 시 카테고리/제목 접기 */
+    .board-write-page .write-field--category,
+    .board-write-page .write-field--title {
+        overflow: hidden;
+        max-height: 80px;
+        opacity: 1;
+        transition: max-height 0.25s ease, opacity 0.2s ease;
+    }
+
+    .board-write-page .write-field--collapsed {
+        max-height: 0 !important;
+        opacity: 0;
+        pointer-events: none;
     }
 }
