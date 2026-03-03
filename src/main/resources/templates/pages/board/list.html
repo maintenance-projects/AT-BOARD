@@ -53,7 +53,8 @@
                    th:href="@{/board(categoryId=${category.id})}"
                    th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? 'category-menu__item--active' : ''}"
                    class="category-menu__item"
-                   th:attr="data-category-id=${category.id}">
+                   th:attr="data-category-id=${category.id}"
+                   onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">
                     <span th:text="${category.name}">게시판명</span>
                     <span th:if="${category.deptId != null}" class="cat-badge cat-badge--dept">부서</span>
                     <span th:if="${category.deptId == null && !category.deptSpecific}" class="cat-badge cat-badge--company">전사</span>
@@ -83,7 +84,7 @@
                 </div>
                 <button th:if="${keyword != null && !#strings.isEmpty(keyword)}"
                         type="button" class="search-form__clear"
-                        th:onclick="'location.href=\'/board?categoryId=\' + ' + ${selectedCategory?.id}"
+                        th:onclick="'location.href=\'/board?categoryId=\' + ' + ${selectedCategory?.id} + ' + \'&t=\' + Date.now()'"
                         aria-label="검색 초기화">&times;</button>
             </form>
         </div>
@@ -116,7 +117,8 @@
                            th:href="@{/board(categoryId=${category.id})}"
                            th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? ' board-sidebar__item--active' : ''}"
                            class="board-sidebar__item"
-                           th:attr="data-category-id=${category.id}">
+                           th:attr="data-category-id=${category.id}"
+                           onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">
                             <span th:text="${category.name}">게시판명</span>
                             <span th:if="${category.deptId != null}" class="cat-badge cat-badge--dept">부서</span>
                             <span th:if="${category.deptId == null && !category.deptSpecific}" class="cat-badge cat-badge--company">전사</span>
@@ -148,7 +150,7 @@
                             <!-- 게시글 목록 -->
                             <div class="board-items" id="boardItems">
                                 <article th:each="board : ${boards.content}" class="board-item"
-                                         onclick="location.href=this.getAttribute('data-href')"
+                                         onclick="location.href=this.getAttribute('data-href')+'&t='+Date.now()"
                                          th:attr="data-href=@{/board/{id}(id=${board.id}, categoryId=${selectedCategory.id}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})},data-board-id=${board.id},data-created-at=${board.createdAtEpochMilli},data-category-id=${board.category.id}">
                                     <div class="board-item__header">
                                         <h2 class="board-item__title">
@@ -194,20 +196,23 @@
                             <div class="pagination pagination--desktop" th:if="${boards.totalPages > 1}">
                                 <a th:if="${boards.hasPrevious()}"
                                    th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.number - 1}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
-                                   class="pagination__btn">&laquo; 이전</a>
+                                   class="pagination__btn"
+                                   onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">&laquo; 이전</a>
                                 <span th:unless="${boards.hasPrevious()}" class="pagination__btn pagination__btn--disabled">&laquo; 이전</span>
 
                                 <th:block th:with="startPage=${T(java.lang.Math).max(0, boards.number - 2)}, endPage=${T(java.lang.Math).min(boards.totalPages - 1, boards.number + 2)}">
                                     <a th:if="${startPage > 0}"
                                        th:href="@{/board(categoryId=${selectedCategory.id}, page=0, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
-                                       class="pagination__number">1</a>
+                                       class="pagination__number"
+                                       onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">1</a>
                                     <span th:if="${startPage > 1}" class="pagination__ellipsis">...</span>
 
                                     <th:block th:each="i : ${#numbers.sequence(startPage, endPage)}">
                                         <a th:if="${i != boards.number}"
                                            th:href="@{/board(categoryId=${selectedCategory.id}, page=${i}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
                                            th:text="${i + 1}"
-                                           class="pagination__number"></a>
+                                           class="pagination__number"
+                                           onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()"></a>
                                         <span th:if="${i == boards.number}"
                                               th:text="${i + 1}"
                                               class="pagination__number pagination__number--active"></span>
@@ -217,12 +222,14 @@
                                     <a th:if="${endPage < boards.totalPages - 1}"
                                        th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.totalPages - 1}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
                                        th:text="${boards.totalPages}"
-                                       class="pagination__number"></a>
+                                       class="pagination__number"
+                                       onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()"></a>
                                 </th:block>
 
                                 <a th:if="${boards.hasNext()}"
                                    th:href="@{/board(categoryId=${selectedCategory.id}, page=${boards.number + 1}, searchType=${keyword != null ? searchType : null}, keyword=${keyword})}"
-                                   class="pagination__btn">다음 &raquo;</a>
+                                   class="pagination__btn"
+                                   onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">다음 &raquo;</a>
                                 <span th:unless="${boards.hasNext()}" class="pagination__btn pagination__btn--disabled">다음 &raquo;</span>
                             </div>
 
@@ -397,7 +404,7 @@
                         if (keyword) {
                             url += '&searchType=' + encodeURIComponent(searchType) + '&keyword=' + encodeURIComponent(keyword);
                         }
-                        location.href = url;
+                        location.href = url + '&t=' + Date.now();
                     };
 
                     const createdAt = formatDate(board.createdAt);

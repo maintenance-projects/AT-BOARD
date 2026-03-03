@@ -12,7 +12,8 @@
     <th:block th:fragment="pageHeader">
         <div class="topbar topbar--center">
             <a th:href="@{/board(categoryId=${backCategoryId}, searchType=${backKeyword != null ? backSearchType : null}, keyword=${backKeyword})}"
-               class="topbar__btn" aria-label="목록으로">
+               class="topbar__btn" aria-label="목록으로"
+               onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">
                 <span class="ico ico--back" aria-hidden="true"></span>
             </a>
             <h1 class="topbar__title">게시글</h1>
@@ -108,7 +109,8 @@
                 </div>
 
                 <div class="board-detail__actions">
-                    <a th:href="@{/board(categoryId=${backCategoryId}, searchType=${backKeyword != null ? backSearchType : null}, keyword=${backKeyword})}" class="btn btn--secondary">목록으로</a>
+                    <a th:href="@{/board(categoryId=${backCategoryId}, searchType=${backKeyword != null ? backSearchType : null}, keyword=${backKeyword})}" class="btn btn--secondary"
+                       onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">목록으로</a>
                 </div>
             </article>
         </main>
