@@ -86,16 +86,24 @@ public class LocalFileStorageService implements FileStorageService {
             Path origDisk = Paths.get(uploadPath).resolve(relativePath);
             if (!Files.exists(origDisk)) return null;
 
-            BufferedImage src = ImageIO.read(origDisk.toFile());
-            if (src == null) return loadFile(relativePath); // 읽기 실패 → 원본
+            // 원본 크기 확인 (upscale 방지용)
+            // min(width, height)로 EXIF 회전 여부와 무관하게 짧은 쪽 기준으로 판단
+            BufferedImage rawImg = ImageIO.read(origDisk.toFile());
+            if (rawImg == null) return loadFile(relativePath); // 읽기 실패 → 원본
 
-            if (src.getWidth() <= maxWidth) {
+            int minDim = Math.min(rawImg.getWidth(), rawImg.getHeight());
+            rawImg = null; // GC 해제
+
+            if (minDim <= maxWidth) {
                 // 이미 충분히 작으면 원본 반환 (캐시 생성 불필요)
                 return new UrlResource(origDisk.toUri());
             }
 
+            // useExifOrientation(true): EXIF 회전 정보 적용 후 리사이즈
+            // → 스마트폰 세로 사진이 썸네일에서 가로로 돌아가는 문제 해결
             Files.createDirectories(cacheDisk.getParent());
-            Thumbnails.of(src)
+            Thumbnails.of(origDisk.toFile())
+                    .useExifOrientation(true)
                     .width(maxWidth)
                     .keepAspectRatio(true)
                     .outputQuality(0.85)
