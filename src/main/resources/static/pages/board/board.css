@@ -1614,6 +1614,97 @@
     border-color: #9ca3af;
 }
 
+/* 검색 히스토리 */
+.search-history {
+    margin-top: 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 4px;
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.search-history__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 2px;
+}
+.search-history__label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+}
+.search-history__clear-all {
+    font-size: 12px;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+.search-history__clear-all:hover {
+    background: #f3f4f6;
+    color: var(--text);
+}
+.search-history__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.search-history__item {
+    display: flex;
+    align-items: center;
+    border-radius: 6px;
+}
+.search-history__item:hover {
+    background: #f5f7fa;
+}
+.search-history__keyword-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 7px 4px 7px 2px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    min-width: 0;
+}
+.search-history__ico {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1;
+}
+.search-history__keyword-text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.search-history__fill-btn,
+.search-history__del-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 7px 6px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+}
+.search-history__fill-btn:hover,
+.search-history__del-btn:hover {
+    color: var(--text);
+}
+.search-history__del-btn {
+    font-size: 18px;
+    padding: 7px 4px;
+}
+
 /* 검색 결과 안내 */
 .search-result-info {
     padding: 8px 0 4px;

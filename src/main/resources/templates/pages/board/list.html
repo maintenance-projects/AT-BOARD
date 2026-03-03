@@ -88,6 +88,14 @@
                         th:onclick="'location.href=\'/board?categoryId=\' + ' + ${selectedCategory?.id} + ' + \'&t=\' + Date.now()'"
                         aria-label="검색 초기화">&times;</button>
             </form>
+            <!-- 검색 히스토리 -->
+            <div id="searchHistory" class="search-history" style="display:none;">
+                <div class="search-history__header">
+                    <span class="search-history__label">최근 검색어</span>
+                    <button type="button" class="search-history__clear-all" onclick="clearAllSearchHistory()">전체 삭제</button>
+                </div>
+                <ul class="search-history__list" id="searchHistoryList"></ul>
+            </div>
         </div>
     </th:block>
 
@@ -554,6 +562,127 @@
         <script>
         // 게시판 목록 작성자 프로필 사진 로드
         loadProfilePhotos();
+
+        // 검색 히스토리
+        (function() {
+            var STORAGE_KEY = 'atboard_search_history';
+            var MAX_ITEMS = 10;
+
+            function getHistory() {
+                try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+                catch(e) { return []; }
+            }
+            function saveHistory(arr) {
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+                catch(e) {}
+            }
+            function addToHistory(keyword) {
+                if (!keyword || !keyword.trim()) return;
+                keyword = keyword.trim();
+                var arr = getHistory().filter(function(k) { return k !== keyword; });
+                arr.unshift(keyword);
+                if (arr.length > MAX_ITEMS) arr = arr.slice(0, MAX_ITEMS);
+                saveHistory(arr);
+            }
+            function escapeAttr(str) {
+                return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            }
+            function escapeHtml(str) {
+                var d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+            }
+
+            function updatePanelHeight() {
+                var panel = document.getElementById('searchPanel');
+                if (panel && panel.classList.contains('search-panel--open')) {
+                    panel.style.maxHeight = panel.scrollHeight + 'px';
+                }
+            }
+
+            function renderHistory() {
+                var arr = getHistory();
+                var container = document.getElementById('searchHistory');
+                var list = document.getElementById('searchHistoryList');
+                if (!container || !list) return;
+                if (arr.length === 0) {
+                    container.style.display = 'none';
+                    updatePanelHeight();
+                    return;
+                }
+                list.innerHTML = '';
+                arr.forEach(function(keyword) {
+                    var li = document.createElement('li');
+                    li.className = 'search-history__item';
+                    var ea = escapeAttr(keyword);
+                    var eh = escapeHtml(keyword);
+                    li.innerHTML =
+                        '<button type="button" class="search-history__keyword-btn" data-kw="' + ea + '">' +
+                            '<span class="search-history__ico">⏱</span>' +
+                            '<span class="search-history__keyword-text">' + eh + '</span>' +
+                        '</button>' +
+                        '<button type="button" class="search-history__fill-btn" data-kw="' + ea + '" title="입력창에 채우기">↵</button>' +
+                        '<button type="button" class="search-history__del-btn" data-kw="' + ea + '" title="삭제">&times;</button>';
+                    list.appendChild(li);
+                });
+                container.style.display = 'block';
+                updatePanelHeight();
+            }
+
+            // 히스토리 목록 클릭 이벤트
+            document.getElementById('searchHistoryList').addEventListener('click', function(e) {
+                var keywordBtn = e.target.closest('.search-history__keyword-btn');
+                var fillBtn    = e.target.closest('.search-history__fill-btn');
+                var delBtn     = e.target.closest('.search-history__del-btn');
+                if (keywordBtn) {
+                    var kw = keywordBtn.getAttribute('data-kw');
+                    addToHistory(kw);
+                    document.getElementById('searchKeywordInput').value = kw;
+                    document.querySelector('.search-form').submit();
+                } else if (fillBtn) {
+                    var kw = fillBtn.getAttribute('data-kw');
+                    var input = document.getElementById('searchKeywordInput');
+                    input.value = kw;
+                    input.focus();
+                    input.setSelectionRange(kw.length, kw.length);
+                } else if (delBtn) {
+                    var kw = delBtn.getAttribute('data-kw');
+                    saveHistory(getHistory().filter(function(k) { return k !== kw; }));
+                    renderHistory();
+                }
+            });
+
+            // 검색 폼 제출 시 히스토리 저장
+            document.querySelector('.search-form').addEventListener('submit', function() {
+                var keyword = document.getElementById('searchKeywordInput').value;
+                addToHistory(keyword);
+            });
+
+            // toggleSearchPanel 오버라이드: 열릴 때 히스토리 표시 + 높이 동적 조절
+            var _origToggleSearch = window.toggleSearchPanel;
+            window.toggleSearchPanel = function() {
+                var panel = document.getElementById('searchPanel');
+                var wasOpen = panel.classList.contains('search-panel--open');
+                if (!wasOpen) {
+                    renderHistory();
+                    _origToggleSearch();
+                    panel.style.maxHeight = panel.scrollHeight + 'px';
+                } else {
+                    panel.style.maxHeight = '';
+                    _origToggleSearch();
+                }
+            };
+
+            window.clearAllSearchHistory = function() {
+                saveHistory([]);
+                renderHistory();
+            };
+
+            // 검색 중이라 패널이 이미 열려있는 경우
+            if (document.getElementById('searchPanel').classList.contains('search-panel--open')) {
+                renderHistory();
+                var panel = document.getElementById('searchPanel');
+                panel.style.maxHeight = panel.scrollHeight + 'px';
+            }
+        })();
 
         // 사이드바 프로필 사진 로드 (1초 타임아웃, 실패 시 글자 아바타 유지)
         (function() {
