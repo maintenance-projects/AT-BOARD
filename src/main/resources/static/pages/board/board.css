@@ -1981,22 +1981,6 @@
         transform: rotate(180deg);
     }
 
-    /* 상세 페이지 첨부파일 아코디언 */
-    .attachment-download-section__title {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        cursor: pointer;
-        user-select: none;
-    }
-
-    .attachment-download-section:not(.--open) .attachment-download-list {
-        display: none;
-    }
-
-    .attachment-download-section:not(.--open) .attachment-accordion-chevron {
-        transform: rotate(180deg);
-    }
 }
 
 /* 첨부파일 다운로드 섹션 (상세보기) */
@@ -2009,10 +1993,27 @@
 }
 
 .attachment-download-section__title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
     font-size: 13px;
     font-weight: 600;
     color: var(--text-secondary, #64748b);
-    margin: 0 0 8px 0;
+    margin: 0;
+}
+
+.attachment-download-section:not(.--open) .attachment-download-list {
+    display: none;
+}
+
+.attachment-download-section:not(.--open) .attachment-accordion-chevron {
+    transform: rotate(180deg);
+}
+
+.attachment-download-section.--open .attachment-download-list {
+    margin-top: 8px;
 }
 
 .attachment-download-list {
@@ -2102,6 +2103,7 @@
  * 글쓰기/수정 - 새 모바일 UI (topbar--write + write-field 구조)
  * ============================================================ */
 
+
 /* 글쓰기 탑바: [X] 글쓰기 [등록] */
 .topbar--write {
     display: flex;
@@ -2119,9 +2121,9 @@
     white-space: nowrap;
 }
 
-/* X (뒤로가기) 버튼 - 모바일에서만 표시 */
+/* X (뒤로가기) 버튼 */
 .topbar__btn--back {
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     background: none;
@@ -2244,8 +2246,7 @@
         transition: none !important;
     }
 
-    /* 탑바 X, 등록 버튼 모바일에서 표시 */
-    .topbar__btn--back,
+    /* 탑바 등록 버튼 모바일에서 표시 */
     .topbar__btn--submit {
         display: flex;
     }

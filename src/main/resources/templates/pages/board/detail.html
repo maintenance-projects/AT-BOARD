@@ -62,7 +62,7 @@
 
                 <!-- 첨부파일 -->
                 <div class="attachment-download-section --open" th:if="${attachments != null && !attachments.isEmpty()}">
-                    <h4 class="attachment-download-section__title" onclick="if(window.innerWidth<1024)this.closest('.attachment-download-section').classList.toggle('--open')">
+                    <h4 class="attachment-download-section__title" onclick="this.closest('.attachment-download-section').classList.toggle('--open')">
                         <span>첨부파일 <span th:text="${attachments.size()}">0</span>개</span>
                         <button type="button" class="attachment-accordion-btn">
                             <span class="attachment-accordion-chevron"></span>
