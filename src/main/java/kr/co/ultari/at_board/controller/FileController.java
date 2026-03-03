@@ -116,7 +116,7 @@ public class FileController {
         } catch (IOException e) {
             log.error("Failed to upload image", e);
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "파일 업로드 중 오류가 발생했습니다.");
+            error.put("error", e.getMessage() != null ? e.getMessage() : "파일 업로드 중 오류가 발생했습니다.");
             return ResponseEntity.internalServerError().body(error);
         }
     }
@@ -159,7 +159,7 @@ public class FileController {
         } catch (IOException e) {
             log.error("Failed to upload attachment", e);
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "파일 업로드 중 오류가 발생했습니다.");
+            error.put("error", e.getMessage() != null ? e.getMessage() : "파일 업로드 중 오류가 발생했습니다.");
             return ResponseEntity.internalServerError().body(error);
         }
     }

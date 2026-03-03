@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -125,7 +126,12 @@ public class RemoteFileStorageService implements FileStorageService {
         });
 
         HttpEntity<MultiValueMap<String, Object>> entity = new HttpEntity<>(body, headers);
-        return fileRestTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+        try {
+            return fileRestTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+        } catch (RestClientException e) {
+            log.error("업무망 파일 서버 업로드 실패: {}", url, e);
+            throw new IOException("업무망 파일 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.", e);
+        }
     }
 
     private HttpHeaders buildHeaders() {
