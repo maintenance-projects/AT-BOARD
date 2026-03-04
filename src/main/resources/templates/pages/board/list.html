@@ -79,6 +79,9 @@
                     <input class="search-form__input" type="text" name="keyword"
                            th:value="${keyword}" placeholder="검색어를 입력하세요"
                            maxlength="100" id="searchKeywordInput" autocomplete="off" />
+                    <button type="button" class="search-form__input-clear" id="inputClearBtn" aria-label="입력 지우기">
+                        <span class="ico ico--close" aria-hidden="true"></span>
+                    </button>
                     <button class="search-form__submit" type="submit" aria-label="검색">
                         <span class="ico ico--search" aria-hidden="true"></span>
                     </button>
@@ -86,7 +89,9 @@
                 <button th:if="${keyword != null && !#strings.isEmpty(keyword)}"
                         type="button" class="search-form__clear"
                         th:onclick="'location.href=\'/board?categoryId=\' + ' + ${selectedCategory?.id} + ' + \'&t=\' + Date.now()'"
-                        aria-label="검색 초기화">&times;</button>
+                        aria-label="검색 초기화">
+                    <span class="ico ico--reset" aria-hidden="true"></span>
+                </button>
             </form>
             <!-- 검색 히스토리 -->
             <div id="searchHistory" class="search-history" style="display:none;">
@@ -680,6 +685,22 @@
             var searchInput = document.getElementById('searchKeywordInput');
             searchInput.addEventListener('focus', renderHistory);
             searchInput.addEventListener('input', renderHistory);
+
+            // 입력 클리어 버튼
+            var inputClearBtn = document.getElementById('inputClearBtn');
+            function updateInputClear() {
+                var hasValue = searchInput.value.length > 0;
+                inputClearBtn.style.display = hasValue ? 'flex' : 'none';
+                searchInput.parentNode.classList.toggle('has-value', hasValue);
+            }
+            searchInput.addEventListener('input', updateInputClear);
+            inputClearBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                searchInput.focus();
+                updateInputClear();
+                renderHistory();
+            });
+            updateInputClear();
 
             window.clearAllSearchHistory = function() {
                 saveHistory([]);

@@ -46,9 +46,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Admin: `session.getAttribute("adminUser")` → `Admin`
 - User: `session.getAttribute("currentUser")` → `User`
 
+### Admin 권한
+- `AdminRole` enum: `ADMIN` (전체 권한), `CATEGORY_ADMIN` (카테고리 관리만)
+- `AdminAuthInterceptor`: `/admin/**` 요청 시 세션 검증
+- `CATEGORY_ADMIN`은 카테고리 CRUD만 허용, 게시글/설정/계정 관리 불가
+
 ## SSO 진입점
 - Header 기반: `X-User-Id` 헤더 → `SsoAuthInterceptor`
-- URL 기반: `GET /{userId}` → `SsoEntryController` → 세션 설정 후 `redirect:/board`
+- URL 기반: `GET /{userId:[0-9]+}` → `SsoEntryController` → 세션 설정 후 `redirect:/board`
+- **숫자 regex 필수**: `{userId:[0-9]+}` — static 리소스 경로(`/css`, `/js` 등)와 충돌 방지
 
 ## User 객체
 - `User.userId`, `User.userName`, `User.posName`, `User.deptId`
@@ -64,9 +70,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Multi-Department Board
 - `BoardCategory.deptIds`: `@ElementCollection Set<String>` → `board_category_depts` 테이블, `@BatchSize(100)`
+- `BoardCategory.deptSpecific`: `true`면 특정 부서 한정 카테고리 (deptIds가 비어있어도 전사 공개가 아님)
 - `DepartmentService.isInAnyDeptOrSubDept(userDeptId, Set<String> targetDeptIds)`: 부서 트리 탐색
 - Access check: `!category.getDeptIds().isEmpty() && !isInAnyDeptOrSubDept(...)`
 - `Dept.deptOrder`: 정렬용 varchar (`database.table.dept.dept-order` 설정), null/빈값 → "999999" 처리
+
+## 카테고리 사이드바 뱃지 & 정렬
+- `category.deptId != null` → `[부서]` 뱃지
+- `deptId == null && !deptSpecific` → `[전사]` 뱃지
+- `deptId == null && deptSpecific` → 뱃지 없음 (다중 부서 한정)
+- `buildSortedCategories()` (BoardController): 전사 → 부서(트리순) → 어드민 부서특정 순
+- `getDeptCompositeSortKeyMap()` (DepartmentService): `String.format("%05d_%s", depth, deptOrder)`
 
 ## Comment AJAX 구조
 - `templates/fragments/comments.html`: 댓글 섹션 프래그먼트 (`th:fragment="commentsList"`)
@@ -92,24 +106,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 템플릿에서 `{userId}` 치환 패턴 사용, 이미지 로드 실패 시 letter avatar 유지 (board.js `loadProfilePhotos`)
 
 ## Key Files
-- `BoardCategory.java`: primary model, deptIds ElementCollection
+- `BoardCategory.java`: primary model, deptIds ElementCollection, deptSpecific flag
 - `DepartmentService.java`: isInAnyDeptOrSubDept, getSelfAndAncestorDeptIds, getDeptCompositeSortKeyMap, getDeptName
 - `BoardCategoryService.java`: getDeptCategoriesForUser
 - `BoardService.java`: access checks, createBoard, getBoardById (원자적 조회수), getBoardByIdNoCount
 - `CommentService.java`: createComment, getCommentsByBoard (@Transactional readOnly)
 - `Dept.java`: secondary entity (MSG_PART)
-- `SsoEntryController.java`: GET /{userId} 진입점
-- `NotificationService.java`: @Async 알림 발송
+- `User.java`: secondary entity (MSG_USER), deptName은 @Transient
+- `SsoEntryController.java`: GET /{userId:[0-9]+} 진입점
+- `NotificationService.java`: @Async 알림 발송, `request-delay-ms=100` 개별 요청 간 딜레이
 - `DepartmentSyncScheduler.java`: 부서 카테고리 자동 동기화
+- `AttachmentRetentionRule.java`: 첨부파일 보존 기간 정책 엔티티 (기능 미완성)
+- `AppSetting.java`: 앱 설정 key-value 저장 (primary DB)
+- `AdminRole.java`: enum ADMIN / CATEGORY_ADMIN
 
 ## CSS
 - `board.css`: 게시판 UI 전체, 모바일 반응형, Quill 툴바 sticky (`top: 70px`)
 - `app.css`: 전역 스타일, `input/textarea/select { font-size: 16px !important }` (iOS 자동확대 방지), `html { scroll-padding-top: 78px }`
 - 모바일 기본값 줄이고 `@media (min-width: 768px)` 이상에서 복원하는 패턴
 
-## 파일 업로드
-- 최대 파일 크기: 10MB, 요청 전체: 150MB
-- 업로드 디렉토리: `uploads/` (application.properties `file.upload-dir`)
+## 파일 업로드 / 스토리지
+- 최대 파일 크기: 10MB (파일당), 요청 전체: 150MB
+- `file.storage.mode=local|remote` (application.properties)
+  - `local`: `LocalFileStorageService` → `uploads/` 디렉토리에 직접 저장
+  - `remote`: `RemoteFileStorageService` → 원격 서버로 프록시 (`file.storage.remote.base-url`)
+- `FileController`: 사용자 파일 업로드/다운로드
+- `InternalFileController`: remote 모드에서 내부 API (secret 헤더 인증)
+- `FileProxyController`: remote 서버 파일 스트리밍 프록시
+- Thumbnailator로 이미지 리사이즈 (`?w=N` 파라미터)
 
 ## 주의사항
 - `@Modifying clearAutomatically=true` 사용 금지 (위 트랜잭션 섹션 참고)
