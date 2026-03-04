@@ -1699,6 +1699,18 @@
     padding: 0 0 4px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+.search-history__list::-webkit-scrollbar {
+    width: 4px;
+}
+.search-history__list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.search-history__list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
 }
 .search-history__item {
     display: flex;
