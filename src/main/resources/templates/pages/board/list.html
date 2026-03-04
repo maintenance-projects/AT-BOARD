@@ -600,7 +600,22 @@
                 var d = document.createElement('div'); d.textContent = str; return d.innerHTML;
             }
 
+            function updateHistoryListHeight() {
+                var list = document.getElementById('searchHistoryList');
+                var container = document.getElementById('searchHistory');
+                if (!list || !container || container.style.display === 'none') return;
+                var vp = window.visualViewport;
+                if (vp) {
+                    var listTop = list.getBoundingClientRect().top - (vp.offsetTop || 0);
+                    var available = vp.height - listTop - 16;
+                    list.style.maxHeight = Math.max(64, available) + 'px';
+                } else {
+                    list.style.maxHeight = '35vh';
+                }
+            }
+
             function updatePanelHeight() {
+                updateHistoryListHeight();
                 var panel = document.getElementById('searchPanel');
                 if (panel && panel.classList.contains('search-panel--open')) {
                     panel.style.maxHeight = (panel.scrollHeight + 8) + 'px';
@@ -701,6 +716,11 @@
                 renderHistory();
             });
             updateInputClear();
+
+            // 키보드 출현/해제 시 히스토리 목록 높이 재계산
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', updatePanelHeight);
+            }
 
             window.clearAllSearchHistory = function() {
                 saveHistory([]);
