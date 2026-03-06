@@ -195,6 +195,8 @@ public class BoardController {
                          @RequestParam(required = false) Long categoryId,
                          @RequestParam(required = false) String searchType,
                          @RequestParam(required = false) String keyword,
+                         @RequestParam(defaultValue = "0") int commentPage,
+                         @RequestParam(defaultValue = "asc") String commentSort,
                          Model model, HttpSession session) {
         User currentUser = (User) session.getAttribute("currentUser");
         if (currentUser == null) {
@@ -223,8 +225,8 @@ public class BoardController {
             return "redirect:/board";
         }
 
-        // 댓글 목록 조회
-        List<Comment> comments = commentService.getCommentsByBoard(board);
+        // 댓글 목록 조회 (페이징)
+        Page<Comment> commentPage2 = commentService.getCommentsByBoardPaged(board, commentPage, commentSort);
 
         // 좋아요 여부 확인
         boolean isLiked = boardLikeService.isLiked(id, currentUser.getUserId());
@@ -235,7 +237,11 @@ public class BoardController {
         Long backCategoryId = categoryId != null ? categoryId : (board.getCategory() != null ? board.getCategory().getId() : null);
 
         model.addAttribute("board", board);
-        model.addAttribute("comments", comments);
+        model.addAttribute("comments", commentPage2.getContent());
+        model.addAttribute("commentPage", commentPage2.getNumber());
+        model.addAttribute("commentTotalPages", commentPage2.getTotalPages());
+        model.addAttribute("commentPageRange", buildCommentPageRange(commentPage2.getNumber(), commentPage2.getTotalPages()));
+        model.addAttribute("commentSort", commentSort);
         model.addAttribute("isLiked", isLiked);
         model.addAttribute("attachments", attachments);
         model.addAttribute("currentUser", currentUser);
@@ -393,7 +399,10 @@ public class BoardController {
 
     // 댓글 섹션 프래그먼트 (AJAX 새로고침용)
     @GetMapping("/{boardId}/comments/fragment")
-    public String commentsFragment(@PathVariable Long boardId, Model model, HttpSession session) {
+    public String commentsFragment(@PathVariable Long boardId,
+                                   @RequestParam(defaultValue = "0") int commentPage,
+                                   @RequestParam(defaultValue = "asc") String commentSort,
+                                   Model model, HttpSession session) {
         User currentUser = (User) session.getAttribute("currentUser");
         if (currentUser == null) {
             return "redirect:/board";
@@ -404,9 +413,13 @@ public class BoardController {
             return "redirect:/board";
         }
 
-        List<Comment> comments = commentService.getCommentsByBoard(board);
+        Page<Comment> commentPageData = commentService.getCommentsByBoardPaged(board, commentPage, commentSort);
         model.addAttribute("board", board);
-        model.addAttribute("comments", comments);
+        model.addAttribute("comments", commentPageData.getContent());
+        model.addAttribute("commentPage", commentPageData.getNumber());
+        model.addAttribute("commentTotalPages", commentPageData.getTotalPages());
+        model.addAttribute("commentPageRange", buildCommentPageRange(commentPageData.getNumber(), commentPageData.getTotalPages()));
+        model.addAttribute("commentSort", commentSort);
         model.addAttribute("currentUser", currentUser);
         return "fragments/comments :: commentsList";
     }
@@ -537,6 +550,34 @@ public class BoardController {
     /**
      * 사이드바 카테고리 정렬: [전사](이름순) > [부서](deptOrder순) > 없음(이름순)
      */
+    /**
+     * 페이지네이션 표시 범위 계산. -1은 생략 부호(...)를 의미.
+     * 최대 8개 요소: [첫] [...] [창4개] [...] [끝]
+     * 예) 현재=9, 전체=20 → [0, -1, 7, 8, 9, 10, -1, 19]
+     */
+    private List<Integer> buildCommentPageRange(int currentPage, int totalPages) {
+        List<Integer> range = new ArrayList<>();
+        if (totalPages <= 8) {
+            for (int i = 0; i < totalPages; i++) range.add(i);
+            return range;
+        }
+        // 현재 페이지 중심의 4칸 슬라이딩 창
+        int windowSize = 4;
+        int from = Math.max(0, currentPage - windowSize / 2);
+        int to   = Math.min(totalPages - 1, from + windowSize - 1);
+        from = Math.max(0, to - windowSize + 1); // to가 끝에 붙으면 from 재조정
+        if (from > 0) {
+            range.add(0);
+            if (from > 1) range.add(-1);
+        }
+        for (int i = from; i <= to; i++) range.add(i);
+        if (to < totalPages - 1) {
+            if (to < totalPages - 2) range.add(-1);
+            range.add(totalPages - 1);
+        }
+        return range;
+    }
+
     private List<BoardCategory> buildSortedCategories(User currentUser) {
         // [전사]: deptIds 비어있음, 이름순
         List<BoardCategory> companyWide = boardCategoryService.getCompanyWideCategories();

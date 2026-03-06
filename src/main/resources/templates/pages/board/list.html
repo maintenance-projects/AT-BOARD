@@ -86,12 +86,6 @@
                         <span class="ico ico--search" aria-hidden="true"></span>
                     </button>
                 </div>
-                <button th:if="${keyword != null && !#strings.isEmpty(keyword)}"
-                        type="button" class="search-form__clear"
-                        th:onclick="'location.href=\'/board?categoryId=\' + ' + ${selectedCategory?.id} + ' + \'&t=\' + Date.now()'"
-                        aria-label="검색 초기화">
-                    <span class="ico ico--reset" aria-hidden="true"></span>
-                </button>
             </form>
             <!-- 검색 히스토리 -->
             <div id="searchHistory" class="search-history" style="display:none;">
@@ -155,8 +149,12 @@
                 <div class="board-list-area">
                     <!-- 검색 결과 안내 -->
                     <div th:if="${keyword != null && !#strings.isEmpty(keyword)}" class="search-result-info">
-                        <span th:text="'&quot;' + ${keyword} + '&quot; 검색 결과 '"></span>
-                        <strong th:text="${boards.totalElements} + '건'"></strong>
+                        <span>
+                            <span th:text="'&quot;' + ${keyword} + '&quot; 검색 결과 '"></span>
+                            <strong th:text="${boards.totalElements} + '건'"></strong>
+                        </span>
+                        <a th:href="@{/board(categoryId=${selectedCategory?.id}, t=${#dates.createNow().time})}"
+                           class="search-result-info__reset">전체목록</a>
                     </div>
 
                     <section class="board-list" aria-label="게시글 목록">
@@ -297,14 +295,22 @@
                 }
             }
 
-            // 검색 중이면 패널 자동 오픈
+            // 검색 중이면 패널 자동 오픈 (페이지 로드 시 transition 없이 즉시 열기)
             (function() {
                 const keyword = /*[[${keyword}]]*/ null;
                 if (keyword) {
                     const panel = document.getElementById('searchPanel');
                     const btn = document.getElementById('searchToggleBtn');
+                    panel.style.transition = 'none';
                     panel.classList.add('search-panel--open');
+                    panel.style.maxHeight = (panel.scrollHeight + 8) + 'px';
                     btn.classList.add('topbar__btn--active');
+                    // 레이아웃 확정 후 transition 복원 (2 rAF: 브라우저 커밋 보장)
+                    requestAnimationFrame(function() {
+                        requestAnimationFrame(function() {
+                            panel.style.transition = '';
+                        });
+                    });
                 }
             })();
 
@@ -689,11 +695,28 @@
                     var kw = document.getElementById('searchKeywordInput').value;
                     if (!kw || !kw.trim()) renderHistory();
                     _origToggleSearch();
-                    panel.style.maxHeight = (panel.scrollHeight + 8) + 'px';
+                    // 히스토리가 표시 중일 때만 동적으로 maxHeight 설정
+                    // (히스토리 없을 때는 CSS max-height: 80px으로 충분하며,
+                    //  같은 JS 프레임에서 scrollHeight 측정 시 padding 트랜지션이 0으로 읽혀 오차 발생)
+                    var historyEl = document.getElementById('searchHistory');
+                    if (historyEl && historyEl.style.display !== 'none') {
+                        // 'none' 중간값 없이 직접 계산 (none→Xpx 트랜지션 버벅임 방지)
+                        // padding이 같은 프레임에서 0으로 읽히므로 top+bottom 20px 수동 보정
+                        panel.style.maxHeight = (panel.scrollHeight + 20 + 8) + 'px';
+                    }
                 } else {
                     panel.style.maxHeight = '';
                     _origToggleSearch();
                 }
+            };
+
+            // 닫기 누른 후 히스토리 재표시 방지 플래그 (페이지 유지 중에만 적용)
+            var historyDismissed = false;
+
+            var _origRenderHistory = renderHistory;
+            renderHistory = function() {
+                if (historyDismissed) return;
+                _origRenderHistory();
             };
 
             // 입력창 클릭 or 입력 시 히스토리 표시
@@ -730,6 +753,7 @@
             window.closeSearchHistory = function() {
                 var container = document.getElementById('searchHistory');
                 if (container) container.style.display = 'none';
+                historyDismissed = true;
                 updatePanelHeight();
             };
 
@@ -751,6 +775,12 @@
                 if (!url) return;
                 var img = avatar.querySelector('.board-sidebar__avatar-img');
                 if (!img) return;
+                // 글자 기반 배경색 배정
+                var letterEl = avatar.querySelector('.board-sidebar__avatar-letter');
+                var letterText = letterEl ? letterEl.textContent.trim() : '';
+                if (letterText && typeof getAvatarColor === 'function') {
+                    avatar.style.background = getAvatarColor(letterText);
+                }
                 var done = false;
                 var timer = setTimeout(function() {
                     if (done) return;
@@ -764,6 +794,8 @@
                     done = true;
                     clearTimeout(timer);
                     img.style.display = 'block';
+                    avatar.style.background = 'transparent';
+                    if (letterEl) letterEl.style.visibility = 'hidden';
                 };
                 img.onerror = function() {
                     if (done) return;

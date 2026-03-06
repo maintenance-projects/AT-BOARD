@@ -109,10 +109,7 @@
                     <th:block th:insert="~{fragments/comments :: commentsList}"></th:block>
                 </div>
 
-                <div class="board-detail__actions">
-                    <a th:href="@{/board(categoryId=${backCategoryId}, searchType=${backKeyword != null ? backSearchType : null}, keyword=${backKeyword})}" class="btn btn--secondary"
-                       onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">목록으로</a>
-                </div>
+
             </article>
         </main>
 
@@ -350,6 +347,7 @@
                 if (srcs.length > 1) {
                     srcs.forEach(function(src, i) {
                         var t = document.createElement('img');
+                        t.onerror = function() { this.onerror = null; this.src = THUMB_FALLBACK; };
                         t.src = src;
                         t.className = 'img-viewer__thumb';
                         t.alt = (i + 1) + '번 이미지';
@@ -382,8 +380,12 @@
                 function prevImage() { current = (current - 1 + srcs.length) % srcs.length; updateViewer(); }
                 function nextImage() { current = (current + 1) % srcs.length; updateViewer(); }
 
+                var IMG_FALLBACK = BOARD_IMG_FALLBACK;
+                var THUMB_FALLBACK = BOARD_IMG_FALLBACK;
+
                 function updateViewer() {
                     resetZoom();
+                    mainImg.onerror = function() { this.onerror = null; this.src = IMG_FALLBACK; };
                     mainImg.src = srcs[current];
                     counterEl.textContent = srcs.length > 1 ? (current + 1) + ' / ' + srcs.length : '';
                     var thumbs = thumbsEl.querySelectorAll('.img-viewer__thumb');
@@ -460,8 +462,27 @@
 
             // AJAX 댓글 처리
             var boardId = /*[[${board.id}]]*/ 0;
+            var currentCommentPage = /*[[${commentPage}]]*/ 0;
+            var currentCommentSort = /*[[${commentSort}]]*/ 'asc';
 
-            function reloadComments(extraOpenId) {
+            function setCommentSort(sort) {
+                currentCommentSort = sort;
+                currentCommentPage = 0;
+                reloadComments(null, 0).then(function() {
+                    var wrapper = document.getElementById('comments-section-wrapper');
+                    if (wrapper) {
+                        wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            }
+
+            function loadCommentPage(page) {
+                currentCommentPage = page;
+                reloadComments(null, page);
+            }
+
+            function reloadComments(extraOpenId, page) {
+                var targetPage = (page !== undefined && page !== null) ? page : currentCommentPage;
                 // 리로드 전에 현재 열린 답글 영역 ID 목록 수집
                 var openIds = [];
                 document.querySelectorAll('.reply-area--open').forEach(function(area) {
@@ -471,13 +492,19 @@
                     openIds.push(String(extraOpenId));
                 }
 
-                return fetch('/board/' + boardId + '/comments/fragment')
+                return fetch('/board/' + boardId + '/comments/fragment?commentPage=' + targetPage + '&commentSort=' + currentCommentSort)
                     .then(function(res) { return res.text(); })
                     .then(function(html) {
                         var wrapper = document.getElementById('comments-section-wrapper');
                         if (wrapper) {
                             wrapper.innerHTML = html;
                             loadProfilePhotos(wrapper);
+                            // 실제 반환된 페이지 번호로 동기화
+                            var list = wrapper.querySelector('.comments-list');
+                            if (list) {
+                                var total = parseInt(list.getAttribute('data-total-pages') || '1', 10);
+                                currentCommentPage = Math.min(targetPage, Math.max(0, total - 1));
+                            }
                             // 열려 있던 답글 영역 복원
                             openIds.forEach(function(id) {
                                 var area = document.getElementById('reply-area-' + id);
@@ -506,11 +533,17 @@
                 return null;
             }
 
-            function submitCommentAjax(form, btn, keepOpenId) {
+            function submitCommentAjax(form, btn, keepOpenId, goToLast) {
                 if (btn) btn.disabled = true;
                 var data = new FormData(form);
                 fetch(form.action, { method: 'POST', body: data, redirect: 'manual' })
-                    .then(function() { return reloadComments(keepOpenId); })
+                    .then(function() {
+                        // 새 댓글 작성 시: 등록순이면 마지막 페이지, 최신순이면 첫 페이지
+                        var targetPage = goToLast
+                            ? (currentCommentSort === 'desc' ? 0 : 99999)
+                            : currentCommentPage;
+                        return reloadComments(keepOpenId, targetPage);
+                    })
                     .catch(function(e) { console.error('댓글 요청 오류:', e); })
                     .then(function() { if (btn) btn.disabled = false; });
             }
@@ -523,13 +556,15 @@
                     var textarea = form.querySelector('textarea[name="content"]');
                     if (!textarea || !textarea.value.trim()) return;
                     e.preventDefault();
-                    submitCommentAjax(form, form.querySelector('button[type="submit"]'), getReplyAreaId(form));
+                    // 루트 댓글 작성만 마지막 페이지로 이동, 답글은 현재 페이지 유지
+                    var isReply = !!form.querySelector('input[name="parentId"]');
+                    submitCommentAjax(form, form.querySelector('button[type="submit"]'), getReplyAreaId(form), !isReply);
                     return;
                 }
                 // 댓글 수정
                 if (form.classList.contains('comment-edit__form')) {
                     e.preventDefault();
-                    submitCommentAjax(form, form.querySelector('button[type="submit"]'), getReplyAreaId(form));
+                    submitCommentAjax(form, form.querySelector('button[type="submit"]'), getReplyAreaId(form), false);
                     return;
                 }
                 // 댓글 삭제
@@ -539,7 +574,7 @@
                         return;
                     }
                     e.preventDefault();
-                    submitCommentAjax(form, null, getReplyAreaId(form));
+                    submitCommentAjax(form, null, getReplyAreaId(form), false);
                     return;
                 }
             });

@@ -10,8 +10,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +62,45 @@ public class CommentService {
             }
         }
         return rootComments;
+    }
+
+    public static final int COMMENT_PAGE_SIZE = 10;
+
+    @Transactional(value = "primaryTransactionManager", readOnly = true)
+    public Page<Comment> getCommentsByBoardPaged(Board board, int page, String sort) {
+        Sort.Direction direction = "desc".equalsIgnoreCase(sort) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page), COMMENT_PAGE_SIZE,
+                Sort.by(direction, "createdAt"));
+
+        // 요청 페이지가 범위를 벗어날 경우 마지막 페이지로 보정
+        Page<Comment> rootPage = commentRepository.findRootCommentsByBoard(board, pageRequest);
+        if (rootPage.getTotalPages() > 0 && page >= rootPage.getTotalPages()) {
+            rootPage = commentRepository.findRootCommentsByBoard(board,
+                    PageRequest.of(rootPage.getTotalPages() - 1, COMMENT_PAGE_SIZE,
+                            Sort.by(direction, "createdAt")));
+        }
+
+        List<Long> rootIds = new ArrayList<>();
+        for (Comment c : rootPage.getContent()) {
+            rootIds.add(c.getId());
+        }
+        if (!rootIds.isEmpty()) {
+            List<Comment> replies = commentRepository.findByParentIdIn(rootIds);
+            Map<Long, List<Comment>> replyMap = new HashMap<>();
+            for (Comment reply : replies) {
+                List<Comment> list = replyMap.get(reply.getParentId());
+                if (list == null) {
+                    list = new ArrayList<>();
+                    replyMap.put(reply.getParentId(), list);
+                }
+                list.add(reply);
+            }
+            for (Comment root : rootPage.getContent()) {
+                List<Comment> replyList = replyMap.get(root.getId());
+                root.setReplies(replyList != null ? replyList : new ArrayList<Comment>());
+            }
+        }
+        return rootPage;
     }
 
     @Transactional("primaryTransactionManager")

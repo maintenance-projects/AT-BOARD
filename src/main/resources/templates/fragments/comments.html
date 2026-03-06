@@ -2,9 +2,19 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="commentsList" class="comments-section">
-    <h3 class="comments-section__title">
-        댓글 <span class="comment-count" th:text="${board.commentCount}">0</span>
-    </h3>
+    <div class="comments-section__header">
+        <h3 class="comments-section__title">
+            댓글 <span class="comment-count" th:text="${board.commentCount}">0</span>
+        </h3>
+        <div class="comment-sort">
+            <button type="button" class="comment-sort__btn"
+                    th:classappend="${commentSort == 'asc' ? ' comment-sort__btn--active' : ''}"
+                    onclick="setCommentSort('asc')">등록순</button>
+            <button type="button" class="comment-sort__btn"
+                    th:classappend="${commentSort == 'desc' ? ' comment-sort__btn--active' : ''}"
+                    onclick="setCommentSort('desc')">최신순</button>
+        </div>
+    </div>
 
     <!-- 댓글 작성 폼 -->
     <form th:action="@{/board/{id}/comments(id=${board.id})}" method="post" class="comment-form">
@@ -19,7 +29,7 @@
     </form>
 
     <!-- 댓글 목록 -->
-    <div class="comments-list">
+    <div class="comments-list" th:attr="data-total-pages=${commentTotalPages}">
         <div th:if="${comments.isEmpty()}" class="comments-empty">
             첫 댓글을 작성해보세요.
         </div>
@@ -121,6 +131,24 @@
                 </form>
             </div>
         </div>
+    </div>
+
+    <!-- 댓글 페이지네이션 -->
+    <div th:if="${commentTotalPages > 1}" class="comment-pagination">
+        <button type="button" th:if="${commentPage > 0}"
+                class="comment-pagination__btn comment-pagination__btn--nav"
+                th:onclick="'loadCommentPage(' + ${commentPage - 1} + ')'">&#8249;</button>
+        <th:block th:each="p : ${commentPageRange}">
+            <span th:if="${p == -1}" class="comment-pagination__ellipsis">&#8230;</span>
+            <button type="button" th:if="${p != -1}"
+                    class="comment-pagination__btn"
+                    th:classappend="${p == commentPage ? ' comment-pagination__btn--active' : ''}"
+                    th:text="${p + 1}"
+                    th:onclick="'loadCommentPage(' + ${p} + ')'">1</button>
+        </th:block>
+        <button type="button" th:if="${commentPage < commentTotalPages - 1}"
+                class="comment-pagination__btn comment-pagination__btn--nav"
+                th:onclick="'loadCommentPage(' + ${commentPage + 1} + ')'">&#8250;</button>
     </div>
 </div>
 </body>
