@@ -423,11 +423,11 @@
                     var file = input.files[0];
                     if (!file) return;
                     if (file.size > 10 * 1024 * 1024) {
-                        alert('파일 크기는 10MB를 초과할 수 없습니다.');
+                        showAlert('파일 크기는 10MB를 초과할 수 없습니다.');
                         return;
                     }
                     if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) {
-                        alert('JPG, PNG, GIF, WEBP 파일만 업로드 가능합니다.');
+                        showAlert('JPG, PNG, GIF, WEBP 파일만 업로드 가능합니다.');
                         return;
                     }
                     var reader = new FileReader();
@@ -575,12 +575,12 @@
                     if (dotIdx >= 0) {
                         var ext = file.name.substring(dotIdx + 1).toLowerCase();
                         if (blockedExtensions.indexOf(ext) >= 0) {
-                            alert('업로드할 수 없는 파일 형식입니다: .' + ext);
+                            showAlert('업로드할 수 없는 파일 형식입니다: .' + ext);
                             return;
                         }
                     }
                     if (file.size > maxSizeBytes) {
-                        alert('파일 크기는 ' + maxSizeMb + 'MB를 초과할 수 없습니다.\n(선택 파일: ' + (file.size / 1024 / 1024).toFixed(1) + 'MB)');
+                        showAlert('파일 크기는 ' + maxSizeMb + 'MB를 초과할 수 없습니다.\n(선택 파일: ' + (file.size / 1024 / 1024).toFixed(1) + 'MB)');
                         return;
                     }
 
@@ -692,7 +692,7 @@
                     var contentEl = document.getElementById('content');
                     contentEl.value = quill.root.innerHTML;
                     if (quill.getText().trim().length === 0) {
-                        alert('내용을 입력하세요.');
+                        showAlert('내용을 입력하세요.');
                         return;
                     }
 
@@ -745,7 +745,7 @@
                                         uploadNext();
                                     })
                                     .catch(function(err) {
-                                        alert(pf.file.name + ' 업로드 실패: ' + err);
+                                        showAlert(pf.file.name + ' 업로드 실패: ' + err);
                                         restoreItem(pf);
                                         enableSubmit();
                                     });
@@ -754,7 +754,7 @@
                             uploadNext();
                         })
                         .catch(function(err) {
-                            alert('이미지 업로드 실패: ' + err);
+                            showAlert('이미지 업로드 실패: ' + err);
                             enableSubmit();
                         });
                 });

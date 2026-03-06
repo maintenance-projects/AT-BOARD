@@ -770,7 +770,7 @@
 .ico--search {
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") center / contain no-repeat;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") center / contain no-repeat;
-    background: currentColor;
+    background: var(--text);
 }
 
 .ico--view {
@@ -1966,7 +1966,7 @@
     border-radius: 8px;
     cursor: pointer;
     transition: border-color 0.2s, background 0.2s;
-    background: var(--bg-secondary, #f8fafc);
+    background: var(--bg);
     text-align: center;
 }
 
@@ -1982,7 +1982,7 @@
 
 .attachment-zone__text {
     font-size: 14px;
-    color: var(--text-secondary, #64748b);
+    color: var(--muted);
 }
 
 .attachment-zone__text--mobile {
@@ -2000,7 +2000,7 @@
 
 .attachment-zone__hint {
     font-size: 12px;
-    color: var(--text-muted, #94a3b8);
+    color: var(--muted);
 }
 
 /* 첨부파일 목록 (업로드 중) */
@@ -2016,14 +2016,14 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background: var(--bg-secondary, #f8fafc);
+    background: var(--bg);
     border: 1px solid var(--border, #e2e8f0);
     border-radius: 6px;
     font-size: 13px;
 }
 
 .attachment-item--uploading {
-    color: var(--text-muted, #94a3b8);
+    color: var(--muted);
     font-style: italic;
 }
 
@@ -2048,7 +2048,7 @@
 .attachment-item__pct {
     display: none;
     font-size: 11px;
-    color: var(--text-muted, #94a3b8);
+    color: var(--muted);
     min-width: 32px;
     text-align: right;
     flex-shrink: 0;
@@ -2059,13 +2059,13 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--text-primary, #1e293b);
+    color: var(--text);
 }
 
 .attachment-item__size {
     flex-shrink: 0;
     font-size: 12px;
-    color: var(--text-muted, #94a3b8);
+    color: var(--muted);
 }
 
 .attachment-item__remove {
@@ -2075,7 +2075,7 @@
     border: none;
     background: none;
     cursor: pointer;
-    color: var(--text-muted, #94a3b8);
+    color: var(--muted);
     font-size: 16px;
     line-height: 1;
     padding: 0;
@@ -2157,7 +2157,7 @@
 .attachment-download-section {
     margin: 16px 0;
     padding: 12px 16px;
-    background: var(--bg-secondary, #f8fafc);
+    background: var(--bg);
     border: 1px solid var(--border, #e2e8f0);
     border-radius: 8px;
 }
@@ -2170,7 +2170,7 @@
     user-select: none;
     font-size: 13px;
     font-weight: 600;
-    color: var(--text-secondary, #64748b);
+    color: var(--muted);
     margin: 0;
 }
 
@@ -2223,7 +2223,7 @@
 .attachment-download-item__size {
     flex-shrink: 0;
     font-size: 12px;
-    color: var(--text-muted, #94a3b8);
+    color: var(--muted);
 }
 
 .attachment-download-item__name--expired {
@@ -2621,5 +2621,139 @@
         max-height: 0 !important;
         opacity: 0;
         pointer-events: none;
+    }
+}
+
+/* ============================================================
+ * 다크 모드 (OS 설정 기반 - prefers-color-scheme: dark)
+ * ============================================================ */
+@media (prefers-color-scheme: dark) {
+
+    /* 카테고리 뱃지 */
+    .cat-badge--company { background: #1e3a5f; color: #93c5fd; }
+    .cat-badge--dept    { background: #14532d; color: #86efac; }
+
+    /* 게시글 목록 미리보기 텍스트 */
+    .board-item__preview { color: #9ca3af; }
+
+    /* 게시글 목록 좋아요/댓글 배지 색상 유지 (이미 명시적 색상) */
+
+    /* 좋아요 버튼 활성 */
+    .like-btn--active { background: #3f1515; border-color: #f87171; color: #f87171; }
+    .like-btn--active .ico--heart { background: #f87171; }
+
+    /* 댓글 정렬 버튼 */
+    .comment-sort__btn { background: #374151; }
+    .comment-sort__btn:hover,
+    .comment-sort__btn--active { background: #4b5563; border-color: #6b7280; color: var(--text); }
+
+    /* 댓글 아이템 */
+    .comment-item { background: #374151; }
+
+    /* 댓글 입력 폼 */
+    .comment-form__input { background: #374151; }
+    .comment-form--reply .comment-form__input { background: #374151; }
+
+    /* 댓글 삭제 버튼 */
+    .comment-item__delete { border-color: #4b5563; }
+    .comment-item__delete:hover { background: #3f1515; border-color: #f87171; }
+
+    /* 수정 버튼 hover */
+    .comment-item__edit-btn:hover { background: #14532d; color: #86efac; }
+
+    /* 취소 버튼 hover */
+    .comment-item__cancel-btn:hover { background: #4b5563; }
+
+    /* 답글 버튼 */
+    .comment-item__reply-btn:hover,
+    .comment-item__reply-btn--active { background: #1e3a5f; color: #93c5fd; }
+
+    /* 답댓글 */
+    .comment-item--reply { background: #2d3748; border-left-color: #60a5fa; }
+    .comment-form--reply { border-top-color: #4b5563; }
+
+    /* 댓글 페이지네이션 */
+    .comment-pagination { border-top-color: #4b5563; }
+    .comment-pagination__btn { background: #374151; border-color: #4b5563; color: #d1d5db; }
+    .comment-pagination__btn:hover { background: #4b5563; border-color: #6b7280; }
+    .comment-pagination__btn--active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+    .comment-pagination__btn--active:hover { background: #2563eb; border-color: #2563eb; }
+    .comment-pagination__btn--nav { color: #9ca3af; }
+    .comment-pagination__ellipsis { color: #6b7280; }
+
+    /* 액션 메뉴 */
+    .action-menu { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); }
+    .action-menu__item:hover { background: rgba(255, 255, 255, 0.07); }
+
+    /* 버튼 */
+    .btn--secondary { background: #374151; }
+    .btn--secondary:active { background: #4b5563; }
+
+    /* 탑바 텍스트 링크 */
+    .topbar__text { color: #60a5fa; }
+
+    /* 카테고리 메뉴 (모바일 드로어) */
+    .category-menu__item:hover { background: rgba(255, 255, 255, 0.05); }
+    .category-menu__item--active { background: #1e3a5f; color: #93c5fd; }
+
+    /* PC 사이드바 카테고리 */
+    .board-sidebar__item:hover { background: rgba(255, 255, 255, 0.05); }
+    .board-sidebar__item--active { background: #1e3a5f; color: #93c5fd; }
+
+    /* 검색 히스토리 */
+    .search-history__item:hover { background: #374151; }
+    .search-history__clear-all:hover,
+    .search-history__close:hover { background: #4b5563; }
+
+    /* 검색 결과 전체목록 링크 hover */
+    .search-result-info__reset:hover { background: #374151; }
+
+    /* TOP 버튼 */
+    .scroll-top-btn { background: #1f2937; }
+
+    /* Quill 에디터 */
+    .quill-editor { background: #1f2937; }
+    .board-form .ql-toolbar.ql-snow { background: #374151; }
+    .board-form .ql-toolbar.ql-snow .ql-stroke { stroke: #d1d5db; }
+    .board-form .ql-toolbar.ql-snow .ql-fill { fill: #d1d5db; }
+    .board-form .ql-toolbar.ql-snow .ql-picker { color: #d1d5db; }
+    .board-form .ql-toolbar.ql-snow .ql-picker-options { background: #374151; border-color: #4b5563; }
+    .board-form .ql-toolbar.ql-snow button:hover .ql-stroke { stroke: #f9fafb; }
+    .board-form .ql-toolbar.ql-snow button:hover .ql-fill { fill: #f9fafb; }
+    .board-form .ql-toolbar.ql-snow .ql-active .ql-stroke { stroke: #60a5fa; }
+    .board-form .ql-toolbar.ql-snow .ql-active .ql-fill { fill: #60a5fa; }
+    .quill-editor .ql-toolbar.ql-snow { background: #374151; }
+    .ql-editor { color: #f9fafb; }
+    .ql-editor.ql-blank::before { color: #6b7280 !important; }
+
+    /* 게시글 상세 코드/pre 블록 */
+    .board-detail__content pre,
+    .board-detail__content code { background: #374151; color: #e2e8f0; }
+
+    /* 첨부파일 업로드 영역 */
+    .attachment-zone { background: #374151; }
+    .attachment-zone:hover,
+    .attachment-zone--drag-over { background: #1e3a5f; }
+
+    /* 첨부파일 아이템 */
+    .attachment-item { background: #374151; }
+    .attachment-item__progress { background: #4b5563; }
+    .attachment-item__remove:hover { background: #3f1515; color: #f87171; }
+
+    /* 첨부파일 만료 뱃지 */
+    .attachment-expired-badge { background: #3f1515; color: #f87171; border-color: #7f1d1d; }
+
+    /* 첨부파일 다운로드 섹션 */
+    .attachment-download-section { background: #374151; }
+
+    /* 글쓰기 제목 구분선 (PC) */
+    .write-title-input { border-bottom-color: #4b5563; }
+
+    /* 에디터 스크롤바 (다크) */
+    .board-write-page .ql-editor {
+        scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    }
+    .board-write-page .ql-editor::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
     }
 }

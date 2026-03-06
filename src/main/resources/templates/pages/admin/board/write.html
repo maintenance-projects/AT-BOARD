@@ -234,8 +234,8 @@
             input.onchange = function() {
                 var file = input.files[0];
                 if (!file) return;
-                if (file.size > 10 * 1024 * 1024) { alert('파일 크기는 10MB를 초과할 수 없습니다.'); return; }
-                if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) { alert('JPG, PNG, GIF, WEBP 파일만 업로드 가능합니다.'); return; }
+                if (file.size > 10 * 1024 * 1024) { showAlert('파일 크기는 10MB를 초과할 수 없습니다.'); return; }
+                if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) { showAlert('JPG, PNG, GIF, WEBP 파일만 업로드 가능합니다.'); return; }
                 var reader = new FileReader();
                 reader.onload = function(e) {
                     var dataUrl = e.target.result;
@@ -473,7 +473,7 @@
                 var contentEl = document.getElementById('content');
                 contentEl.value = quill.root.innerHTML;
                 if (quill.getText().trim().length === 0) {
-                    alert('내용을 입력하세요.');
+                    showAlert('내용을 입력하세요.');
                     return;
                 }
 
@@ -510,7 +510,7 @@
                                     uploadNext();
                                 })
                                 .catch(function(err) {
-                                    alert(pf.file.name + ' 업로드 실패: ' + err);
+                                    showAlert(pf.file.name + ' 업로드 실패: ' + err);
                                     restoreItem(pf);
                                     submitBtn.disabled = false;
                                     submitBtn.textContent = '등록';
@@ -520,7 +520,7 @@
                         uploadNext();
                     })
                     .catch(function(err) {
-                        alert('이미지 업로드 실패: ' + err);
+                        showAlert('이미지 업로드 실패: ' + err);
                         submitBtn.disabled = false;
                         submitBtn.textContent = '등록';
                     });

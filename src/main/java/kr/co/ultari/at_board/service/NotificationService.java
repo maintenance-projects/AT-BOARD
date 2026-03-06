@@ -70,7 +70,7 @@ public class NotificationService {
      * 새 게시글 알림 발송 진입점. 비동기 실행으로 게시글 저장에 영향 없음.
      * 카테고리의 notificationEnabled가 false이거나 serverType이 none이면 즉시 반환.
      */
-    @Async
+    @Async("notificationExecutor")
     public void notifyNewPost(Board board) {
         try {
             BoardCategory category = board.getCategory();

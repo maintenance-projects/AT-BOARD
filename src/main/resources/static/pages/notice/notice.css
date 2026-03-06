@@ -119,3 +119,12 @@ body {
     font-size: 14px;
     color: var(--muted);
 }
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #111827;
+        --text: #f9fafb;
+        --muted: #9ca3af;
+        --line: #374151;
+    }
+}

@@ -266,6 +266,169 @@ button {
     word-break: keep-all;
 }
 
+/* ============================================================
+ * 공통 Alert 모달
+ * ============================================================ */
+.js-alert-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.js-alert-modal--open {
+    display: flex;
+}
+.js-alert-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+.js-alert-modal__box {
+    position: relative;
+    background: #fff;
+    border-radius: 14px;
+    padding: 32px 28px 24px;
+    max-width: 340px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    text-align: center;
+}
+.js-alert-modal__msg {
+    font-size: 15px;
+    color: #111827;
+    line-height: 1.7;
+    margin-bottom: 24px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.js-alert-modal__ok {
+    padding: 11px 40px;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.js-alert-modal__ok:hover {
+    background: #2563eb;
+}
+
+/* Confirm 모달 */
+.js-confirm-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.js-confirm-modal--open { display: flex; }
+.js-confirm-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+.js-confirm-modal__box {
+    position: relative;
+    background: #fff;
+    border-radius: 14px;
+    padding: 32px 28px 24px;
+    max-width: 340px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    text-align: center;
+}
+.js-confirm-modal__msg {
+    font-size: 15px;
+    color: #111827;
+    line-height: 1.7;
+    margin-bottom: 24px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.js-confirm-modal__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+.js-confirm-modal__cancel {
+    padding: 11px 28px;
+    background: #f3f4f6;
+    color: #374151;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.js-confirm-modal__cancel:hover { background: #e5e7eb; }
+.js-confirm-modal__ok {
+    padding: 11px 28px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.js-confirm-modal__ok:hover { background: #dc2626; }
+
+/* ============================================================
+ * 다크 모드 (OS 설정 기반 - prefers-color-scheme: dark)
+ * ============================================================ */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #111827;
+        --surface: #1f2937;
+        --text: #f9fafb;
+        --muted: #9ca3af;
+        --line: #374151;
+        --border: #4b5563;
+        --primary: #60a5fa;
+        --shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .app-header {
+        background: #1e293b;
+    }
+
+    .section__title {
+        color: var(--text);
+    }
+
+    .topbar__btn:hover {
+        background: rgba(255, 255, 255, 0.07);
+    }
+
+    .tile__label {
+        color: #9ca3af;
+    }
+
+    .tile:active {
+        background: rgba(255, 255, 255, 0.07);
+    }
+
+    .js-alert-modal__backdrop { background: rgba(0, 0, 0, 0.6); }
+    .js-alert-modal__box { background: #1f2937; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); }
+    .js-alert-modal__msg { color: #f9fafb; }
+
+    .js-confirm-modal__backdrop { background: rgba(0, 0, 0, 0.6); }
+    .js-confirm-modal__box { background: #1f2937; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); }
+    .js-confirm-modal__msg { color: #f9fafb; }
+    .js-confirm-modal__cancel { background: #374151; color: #d1d5db; }
+    .js-confirm-modal__cancel:hover { background: #4b5563; }
+}
+
 .ic-30 {
     width: 30px !important;
     height: 30px !important;

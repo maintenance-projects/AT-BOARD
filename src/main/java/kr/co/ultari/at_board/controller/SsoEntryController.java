@@ -107,6 +107,7 @@ public class SsoEntryController {
           .append(".desc{font-size:14px;color:#6b7280;line-height:1.7;word-break:keep-all}")
           .append(".sub{margin-top:8px;font-size:13px;color:#9ca3af}")
           .append("@media(max-width:480px){.card{padding:40px 24px}.icon{font-size:44px}.title{font-size:18px}}")
+          .append("@media(prefers-color-scheme:dark){body{background:#111827}.card{background:#1f2937;box-shadow:0 8px 24px rgba(0,0,0,.4)}.title{color:#f9fafb}.desc{color:#9ca3af}.sub{color:#6b7280}}")
           .append("</style></head><body>")
           .append("<div class=\"card\">")
           .append("<div class=\"icon\">🔒</div>")
