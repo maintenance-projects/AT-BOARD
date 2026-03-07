@@ -124,6 +124,7 @@
                                 <td th:text="${board.viewCount}">0</td>
                                 <td>
                                     <form th:action="@{/admin/boards/delete/{id}(id=${board.id})}" method="post" style="display: inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                        <input type="hidden" name="categoryId" th:value="${categoryId}" />
                                         <button type="submit" class="btn btn--sm btn--danger">삭제</button>
                                     </form>
                                 </td>

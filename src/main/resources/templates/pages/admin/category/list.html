@@ -101,23 +101,22 @@
                                 <td><a th:href="@{/admin/boards(categoryId=${category.id})}" th:text="${category.name}" class="link" style="font-weight: 600;">게시판명</a></td>
                                 <td th:text="${category.description}">설명</td>
                                 <td>
-                                    <span th:if="${category.deptSpecific}" class="badge badge--secondary">부서 전용</span>
-                                    <span th:unless="${category.deptSpecific}" class="badge badge--primary">전사 공용</span>
+                                    <span th:if="${category.deptSpecific}" class="cat-label cat-label--gray">부서 전용</span>
+                                    <span th:unless="${category.deptSpecific}" class="cat-label cat-label--blue">전사 공용</span>
                                 </td>
                                 <td>
-                                    <span th:unless="${category.deptSpecific}">-</span>
+                                    <span th:unless="${category.deptSpecific}" class="cat-label cat-label--muted">-</span>
                                     <th:block th:if="${category.deptSpecific}">
-                                        <span th:each="dId : ${category.deptIds}" th:text="${dId}"
-                                              class="badge badge--secondary" style="font-size:0.75rem; margin:1px;"></span>
+                                        <span th:each="dId : ${category.deptIds}" th:text="${dId}" class="cat-label cat-label--gray"></span>
                                     </th:block>
                                 </td>
                                 <td>
-                                    <span th:if="${category.adminOnly}" class="badge badge--danger">관리자 전용</span>
-                                    <span th:unless="${category.adminOnly}" class="badge badge--success">전체</span>
+                                    <span th:if="${category.adminOnly}" class="cat-label cat-label--red">관리자 전용</span>
+                                    <span th:unless="${category.adminOnly}" class="cat-label cat-label--green">전체</span>
                                 </td>
                                 <td>
-                                    <span th:if="${category.isActive}" class="badge badge--success">활성</span>
-                                    <span th:unless="${category.isActive}" class="badge badge--danger">비활성</span>
+                                    <span th:if="${category.isActive}" class="cat-label cat-label--green">활성</span>
+                                    <span th:unless="${category.isActive}" class="cat-label cat-label--red">비활성</span>
                                 </td>
                                 <td>
                                     <div class="action-buttons">

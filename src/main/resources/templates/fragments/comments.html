@@ -42,6 +42,7 @@
                     <img class="profile-avatar__img" alt="" />
                 </span>
                 <span class="comment-item__author" th:text="${comment.authorDisplayName}">작성자</span>
+                <span th:if="${comment.userId == board.userId}" class="comment-author-badge">작성자</span>
                 <time class="comment-item__date" th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
             </div>
             <p th:id="'comment-text-' + ${comment.id}" class="comment-item__content" th:text="${comment.content}">댓글 내용</p>
@@ -89,6 +90,7 @@
                                 <img class="profile-avatar__img" alt="" />
                             </span>
                             <span class="comment-item__author" th:text="${reply.authorDisplayName}">작성자</span>
+                            <span th:if="${reply.userId == board.userId}" class="comment-author-badge">작성자</span>
                             <time class="comment-item__date" th:text="${#temporals.format(reply.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</time>
                         </div>
                         <p th:id="'comment-text-' + ${reply.id}" class="comment-item__content" th:text="${reply.content}">답댓글 내용</p>

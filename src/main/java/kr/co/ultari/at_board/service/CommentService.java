@@ -1,5 +1,6 @@
 package kr.co.ultari.at_board.service;
 
+import kr.co.ultari.at_board.model.primary.Admin;
 import kr.co.ultari.at_board.model.primary.Board;
 import kr.co.ultari.at_board.model.primary.Comment;
 import kr.co.ultari.at_board.model.secondary.User;
@@ -101,6 +102,20 @@ public class CommentService {
             }
         }
         return rootPage;
+    }
+
+    @Transactional("primaryTransactionManager")
+    public Comment createCommentByAdmin(Board board, String content, Admin admin) {
+        Comment comment = Comment.builder()
+                .board(board)
+                .userId("admin_" + admin.getAdminId())
+                .authorName(admin.getAdminName())
+                .authorPosName("관리자")
+                .content(content)
+                .build();
+        Comment savedComment = commentRepository.save(comment);
+        boardRepository.incrementCommentCount(board.getId());
+        return savedComment;
     }
 
     @Transactional("primaryTransactionManager")

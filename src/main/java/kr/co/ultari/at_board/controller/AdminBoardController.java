@@ -4,9 +4,11 @@ import kr.co.ultari.at_board.model.primary.Admin;
 import kr.co.ultari.at_board.model.primary.Board;
 import kr.co.ultari.at_board.model.primary.BoardAttachment;
 import kr.co.ultari.at_board.model.primary.BoardCategory;
+import kr.co.ultari.at_board.model.primary.Comment;
 import kr.co.ultari.at_board.service.BoardAttachmentService;
 import kr.co.ultari.at_board.service.BoardCategoryService;
 import kr.co.ultari.at_board.service.BoardService;
+import kr.co.ultari.at_board.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -21,6 +23,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+// Comment import already added via CommentService
+
 @Controller
 @RequestMapping("/admin/boards")
 @RequiredArgsConstructor
@@ -30,6 +34,7 @@ public class AdminBoardController {
     private final BoardService boardService;
     private final BoardCategoryService boardCategoryService;
     private final BoardAttachmentService boardAttachmentService;
+    private final CommentService commentService;
 
     private static final int PAGE_SIZE = 20;
 
@@ -69,6 +74,7 @@ public class AdminBoardController {
                          @RequestParam(required = false) Long categoryId,
                          @RequestParam(required = false) String searchType,
                          @RequestParam(required = false) String keyword,
+                         @RequestParam(defaultValue = "0") int commentPage,
                          Model model, HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
         if (admin == null) {
@@ -81,10 +87,14 @@ public class AdminBoardController {
         }
 
         List<BoardAttachment> attachments = boardAttachmentService.getByBoardId(id);
+        Page<Comment> commentPageData = commentService.getCommentsByBoardPaged(board, commentPage, "asc");
 
         model.addAttribute("admin", admin);
         model.addAttribute("board", board);
         model.addAttribute("attachments", attachments);
+        model.addAttribute("comments", commentPageData.getContent());
+        model.addAttribute("commentPage", commentPageData.getNumber());
+        model.addAttribute("commentTotalPages", commentPageData.getTotalPages());
         model.addAttribute("backCategoryId", categoryId);
         model.addAttribute("backSearchType", searchType);
         model.addAttribute("backKeyword", keyword);
@@ -148,8 +158,67 @@ public class AdminBoardController {
         return "redirect:/admin/boards?categoryId=" + categoryId;
     }
 
+    @PostMapping("/{boardId}/comments")
+    public String createComment(@PathVariable Long boardId,
+                                @RequestParam String content,
+                                @RequestParam(required = false) Long categoryId,
+                                @RequestParam(required = false) String searchType,
+                                @RequestParam(required = false) String keyword,
+                                @RequestParam(defaultValue = "0") int commentPage,
+                                HttpSession session) {
+        Admin admin = (Admin) session.getAttribute("adminUser");
+        if (admin == null) return "redirect:/admin/login";
+
+        if (content == null || content.trim().isEmpty()) {
+            return buildDetailRedirect(boardId, categoryId, searchType, keyword, commentPage);
+        }
+
+        Board board = boardService.getBoardByIdNoCount(boardId);
+        if (board != null) {
+            commentService.createCommentByAdmin(board, content.trim(), admin);
+        }
+        return buildDetailRedirect(boardId, categoryId, searchType, keyword, commentPage);
+    }
+
+    @PostMapping("/comments/{commentId}/delete")
+    public String deleteComment(@PathVariable Long commentId,
+                                @RequestParam Long boardId,
+                                @RequestParam(required = false) Long categoryId,
+                                @RequestParam(required = false) String searchType,
+                                @RequestParam(required = false) String keyword,
+                                @RequestParam(defaultValue = "0") int commentPage,
+                                HttpSession session) {
+        Admin admin = (Admin) session.getAttribute("adminUser");
+        if (admin == null) return "redirect:/admin/login";
+
+        commentService.deleteCommentByAdmin(commentId);
+        return buildDetailRedirect(boardId, categoryId, searchType, keyword, commentPage);
+    }
+
+    private String buildDetailRedirect(Long boardId, Long categoryId, String searchType, String keyword, int commentPage) {
+        StringBuilder url = new StringBuilder("redirect:/admin/boards/").append(boardId);
+        StringBuilder params = new StringBuilder();
+        if (categoryId != null) params.append("categoryId=").append(categoryId);
+        if (searchType != null && !searchType.trim().isEmpty()) {
+            if (params.length() > 0) params.append("&");
+            params.append("searchType=").append(searchType);
+        }
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            if (params.length() > 0) params.append("&");
+            params.append("keyword=").append(keyword);
+        }
+        if (commentPage > 0) {
+            if (params.length() > 0) params.append("&");
+            params.append("commentPage=").append(commentPage);
+        }
+        if (params.length() > 0) url.append("?").append(params);
+        return url.toString();
+    }
+
     @PostMapping("/delete/{id}")
-    public String delete(@PathVariable Long id, HttpSession session) {
+    public String delete(@PathVariable Long id,
+                         @RequestParam(required = false) Long categoryId,
+                         HttpSession session) {
         Admin admin = (Admin) session.getAttribute("adminUser");
         if (admin == null) {
             return "redirect:/admin/login";
@@ -162,6 +231,9 @@ public class AdminBoardController {
             log.info("Admin {} deleted board: {}", admin.getAdminId(), board.getTitle());
         }
 
+        if (categoryId != null) {
+            return "redirect:/admin/boards?categoryId=" + categoryId;
+        }
         return "redirect:/admin/boards";
     }
 }
