@@ -11,7 +11,9 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "board_likes")
+@Table(name = "board_likes", indexes = {
+        @Index(name = "idx_board_likes_user_id", columnList = "USER_ID")
+})
 @Data
 @Builder
 @NoArgsConstructor

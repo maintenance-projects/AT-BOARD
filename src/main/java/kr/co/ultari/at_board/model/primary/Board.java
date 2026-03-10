@@ -9,6 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.regex.Pattern;
 
 @Entity
 @Table(name = "board", indexes = {
@@ -107,19 +108,24 @@ public class Board {
         return content.contains("<img");
     }
 
+    private static final Pattern P_HTML_TAG  = Pattern.compile("<[^>]*>");
+    private static final Pattern P_NBSP      = Pattern.compile("&nbsp;");
+    private static final Pattern P_LT        = Pattern.compile("&lt;");
+    private static final Pattern P_GT        = Pattern.compile("&gt;");
+    private static final Pattern P_AMP       = Pattern.compile("&amp;");
+    private static final Pattern P_QUOT      = Pattern.compile("&quot;");
+    private static final Pattern P_WHITESPACE = Pattern.compile("\\s+");
+
     // HTML 태그 제거한 순수 텍스트 (미리보기용)
     public String getPlainContent() {
         if (content == null) return "";
-        // HTML 태그 제거
-        String plain = content.replaceAll("<[^>]*>", "");
-        // HTML 엔티티 디코딩
-        plain = plain.replaceAll("&nbsp;", " ");
-        plain = plain.replaceAll("&lt;", "<");
-        plain = plain.replaceAll("&gt;", ">");
-        plain = plain.replaceAll("&amp;", "&");
-        plain = plain.replaceAll("&quot;", "\"");
-        // 연속된 공백 정리
-        plain = plain.replaceAll("\\s+", " ");
+        String plain = P_HTML_TAG.matcher(content).replaceAll("");
+        plain = P_NBSP.matcher(plain).replaceAll(" ");
+        plain = P_LT.matcher(plain).replaceAll("<");
+        plain = P_GT.matcher(plain).replaceAll(">");
+        plain = P_AMP.matcher(plain).replaceAll("&");
+        plain = P_QUOT.matcher(plain).replaceAll("\"");
+        plain = P_WHITESPACE.matcher(plain).replaceAll(" ");
         return plain.trim();
     }
 }

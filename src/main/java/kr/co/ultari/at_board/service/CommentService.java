@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,30 +38,6 @@ public class CommentService {
     public Set<Long> getCommentedBoardIds(List<Long> boardIds, String userId) {
         if (boardIds == null || boardIds.isEmpty()) return Collections.emptySet();
         return new HashSet<>(commentRepository.findCommentedBoardIds(userId, boardIds));
-    }
-
-    @Transactional(value = "primaryTransactionManager", readOnly = true)
-    public List<Comment> getCommentsByBoard(Board board) {
-        // 1회 쿼리로 모든 댓글 조회 후 인-메모리에서 트리 구성 (N+1 방지)
-        List<Comment> allComments = commentRepository.findByBoardOrderByCreatedAtAsc(board);
-        Map<Long, Comment> commentMap = new LinkedHashMap<>();
-        List<Comment> rootComments = new ArrayList<>();
-        for (Comment comment : allComments) {
-            comment.setReplies(new ArrayList<>());
-            commentMap.put(comment.getId(), comment);
-            if (comment.getParentId() == null) {
-                rootComments.add(comment);
-            }
-        }
-        for (Comment comment : allComments) {
-            if (comment.getParentId() != null) {
-                Comment parent = commentMap.get(comment.getParentId());
-                if (parent != null) {
-                    parent.getReplies().add(comment);
-                }
-            }
-        }
-        return rootComments;
     }
 
     public static final int COMMENT_PAGE_SIZE = 10;

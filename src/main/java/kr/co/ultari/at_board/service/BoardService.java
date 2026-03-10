@@ -13,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.PostConstruct;
+import org.springframework.scheduling.annotation.Scheduled;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -31,25 +33,6 @@ public class BoardService {
     private final CommentRepository commentRepository;
     private final BoardLikeRepository boardLikeRepository;
     private final NotificationService notificationService;
-
-    public List<Board> getAllBoards() {
-        return boardRepository.findAllByOrderByCreatedAtDesc();
-    }
-
-    public List<Board> getBoardsByUser(User user) {
-        List<BoardCategory> categories = new ArrayList<>();
-        categories.addAll(boardCategoryService.getCompanyWideCategories());
-        categories.addAll(boardCategoryService.getDeptCategoriesForUser(user.getDeptId()));
-        return boardRepository.findByCategoryInOrderByCreatedAtDesc(categories);
-    }
-
-    public List<Board> getBoardsByCategoryId(Long categoryId) {
-        BoardCategory category = boardCategoryService.getCategoryById(categoryId);
-        if (category == null) {
-            return new ArrayList<>();
-        }
-        return boardRepository.findByCategoryOrderByCreatedAtDesc(category);
-    }
 
     public Page<Board> getBoardsByCategoryIdPaged(Long categoryId, Pageable pageable) {
         BoardCategory category = boardCategoryService.getCategoryById(categoryId);
@@ -239,9 +222,21 @@ public class BoardService {
         return boardRepository.countByCreatedAtAfter(startOfDay);
     }
 
-    // 카테고리별 신규 게시글 ID 맵 (N 배지용, 최근 24시간)
-    @Transactional(value = "primaryTransactionManager", readOnly = true)
-    public Map<String, List<Long>> getNewPostsByCategoryMap(LocalDateTime since) {
+    // 카테고리별 신규 게시글 ID 맵 캐시 (N 배지용, 최근 24시간)
+    private volatile Map<String, List<Long>> newPostsCache = new HashMap<>();
+
+    @PostConstruct
+    public void initNewPostsCache() {
+        newPostsCache = buildNewPostsMap();
+    }
+
+    @Scheduled(fixedRate = 5 * 60 * 1000) // 5분마다 갱신
+    public void refreshNewPostsCache() {
+        newPostsCache = buildNewPostsMap();
+    }
+
+    private Map<String, List<Long>> buildNewPostsMap() {
+        LocalDateTime since = LocalDateTime.now().minusHours(24);
         List<Object[]> rows = boardRepository.findNewPostIdAndCategoryIdSince(since);
         Map<String, List<Long>> result = new HashMap<>();
         for (Object[] row : rows) {
@@ -254,5 +249,9 @@ public class BoardService {
             result.get(key).add(postId);
         }
         return result;
+    }
+
+    public Map<String, List<Long>> getNewPostsByCategoryMap(LocalDateTime since) {
+        return newPostsCache;
     }
 }

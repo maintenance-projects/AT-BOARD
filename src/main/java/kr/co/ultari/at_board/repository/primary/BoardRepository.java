@@ -18,15 +18,6 @@ import java.util.Optional;
 @Repository
 public interface BoardRepository extends JpaRepository<Board, Long> {
 
-    // category를 JOIN FETCH로 함께 로드 (LazyInitializationException 방지)
-    @EntityGraph(attributePaths = {"category"})
-    List<Board> findAllByOrderByCreatedAtDesc();
-
-    List<Board> findByCategoryInOrderByCreatedAtDesc(List<BoardCategory> categories);
-
-    @EntityGraph(attributePaths = {"category"})
-    List<Board> findByCategoryOrderByCreatedAtDesc(BoardCategory category);
-
     // 페이징 지원 (user-facing board list API - category 접근 없음, EntityGraph 불필요)
     Page<Board> findByCategoryOrderByCreatedAtDesc(BoardCategory category, Pageable pageable);
 
