@@ -27,4 +27,13 @@ public interface BoardAttachmentRepository extends JpaRepository<BoardAttachment
     @Modifying
     @Query("UPDATE BoardAttachment a SET a.boardId = :boardId WHERE a.id IN :ids AND a.boardId IS NULL")
     void assignBoardIdByIds(@Param("boardId") Long boardId, @Param("ids") List<Long> ids);
+
+    // 여러 게시글의 첨부파일 조회/삭제 (카테고리 삭제 시 벌크 처리)
+    @Query("SELECT a FROM BoardAttachment a WHERE a.boardId IN :boardIds")
+    List<BoardAttachment> findByBoardIdIn(@Param("boardIds") List<Long> boardIds);
+
+    @Modifying
+    @Transactional("primaryTransactionManager")
+    @Query("DELETE FROM BoardAttachment a WHERE a.boardId IN :boardIds")
+    void deleteAllByBoardIdIn(@Param("boardIds") List<Long> boardIds);
 }

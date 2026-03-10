@@ -33,6 +33,7 @@ public class BoardService {
     private final CommentRepository commentRepository;
     private final BoardLikeRepository boardLikeRepository;
     private final NotificationService notificationService;
+    private final BoardAttachmentService boardAttachmentService;
 
     public Page<Board> getBoardsByCategoryIdPaged(Long categoryId, Pageable pageable) {
         BoardCategory category = boardCategoryService.getCategoryById(categoryId);
@@ -163,6 +164,9 @@ public class BoardService {
                 throw new IllegalArgumentException("본인이 작성한 글만 삭제할 수 있습니다.");
             }
 
+            // 첨부파일 및 인라인 이미지 물리 파일 삭제 (트랜잭션 커밋 후 실행)
+            boardAttachmentService.deleteByBoardId(id);
+            boardAttachmentService.deleteInlineImages(board.getContent());
             // FK 제약 조건 순서: 댓글 → 좋아요 → 게시글
             commentRepository.deleteByBoardId(id);
             boardLikeRepository.deleteByBoardId(id);
@@ -203,7 +207,11 @@ public class BoardService {
 
     @Transactional("primaryTransactionManager")
     public boolean deleteBoardByAdmin(Long id) {
-        if (boardRepository.existsById(id)) {
+        Board board = boardRepository.findById(id).orElse(null);
+        if (board != null) {
+            // 첨부파일 및 인라인 이미지 물리 파일 삭제 (트랜잭션 커밋 후 실행)
+            boardAttachmentService.deleteByBoardId(id);
+            boardAttachmentService.deleteInlineImages(board.getContent());
             // FK 제약 조건 순서: 댓글 → 좋아요 → 게시글
             commentRepository.deleteByBoardId(id);
             boardLikeRepository.deleteByBoardId(id);

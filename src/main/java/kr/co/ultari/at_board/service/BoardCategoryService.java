@@ -29,6 +29,7 @@ public class BoardCategoryService {
     private final CommentRepository commentRepository;
     private final BoardLikeRepository boardLikeRepository;
     private final DepartmentService departmentService;
+    private final BoardAttachmentService boardAttachmentService;
 
     public BoardCategory getCategoryById(Long id) {
         return boardCategoryRepository.findById(id).orElse(null);
@@ -101,6 +102,14 @@ public class BoardCategoryService {
         if (category == null) return false;
 
         log.info("Deleting category {} with bulk delete", category.getName());
+
+        // 첨부파일 및 인라인 이미지 물리 파일 삭제 (트랜잭션 커밋 후 실행)
+        List<Long> boardIds = boardRepository.findIdsByCategory(category);
+        if (!boardIds.isEmpty()) {
+            boardAttachmentService.deleteByBoardIds(boardIds);
+            List<String> contents = boardRepository.findContentsByCategory(category);
+            boardAttachmentService.deleteInlineImagesByContents(contents);
+        }
 
         // 벌크 삭제: 댓글 → 좋아요 → 게시글 순서로 삭제 (N+1 방지)
         commentRepository.deleteByBoardCategory(category);

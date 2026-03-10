@@ -15,17 +15,23 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class BoardAttachmentService {
+
+    private static final Pattern INLINE_IMAGE_PATTERN =
+            Pattern.compile("/api/files/images/(imgs/[^\"'?\\s<>]+)");
 
     private final BoardAttachmentRepository attachmentRepository;
     private final AppSettingService appSettingService;
@@ -173,6 +179,75 @@ public class BoardAttachmentService {
                 }
             }
         });
+    }
+
+    /**
+     * 여러 게시글의 첨부파일 일괄 삭제 (카테고리 삭제 시 사용)
+     */
+    @Transactional("primaryTransactionManager")
+    public void deleteByBoardIds(List<Long> boardIds) {
+        if (boardIds == null || boardIds.isEmpty()) return;
+        List<BoardAttachment> attachments = attachmentRepository.findByBoardIdIn(boardIds);
+        if (attachments.isEmpty()) return;
+        final List<String> filePaths = attachments.stream()
+                .map(BoardAttachment::getFilePath)
+                .collect(Collectors.toList());
+        attachmentRepository.deleteAllByBoardIdIn(boardIds);
+        deletePhysicalFiles(filePaths);
+    }
+
+    /**
+     * 본문 HTML에서 인라인 이미지 경로를 추출하여 파일 삭제 (트랜잭션 커밋 후)
+     */
+    public void deleteInlineImages(String content) {
+        if (content == null || content.trim().isEmpty()) return;
+        List<String> paths = extractInlineImagePaths(content);
+        if (!paths.isEmpty()) {
+            deletePhysicalFiles(paths);
+        }
+    }
+
+    /**
+     * 여러 본문의 인라인 이미지 일괄 삭제 (카테고리 삭제 시 사용)
+     */
+    public void deleteInlineImagesByContents(List<String> contents) {
+        if (contents == null || contents.isEmpty()) return;
+        List<String> paths = new ArrayList<>();
+        for (String content : contents) {
+            if (content != null && !content.trim().isEmpty()) {
+                paths.addAll(extractInlineImagePaths(content));
+            }
+        }
+        if (!paths.isEmpty()) {
+            deletePhysicalFiles(paths);
+        }
+    }
+
+    private List<String> extractInlineImagePaths(String content) {
+        List<String> paths = new ArrayList<>();
+        Matcher matcher = INLINE_IMAGE_PATTERN.matcher(content);
+        while (matcher.find()) {
+            paths.add(matcher.group(1));
+        }
+        return paths;
+    }
+
+    private void deletePhysicalFiles(List<String> paths) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            final List<String> toDelete = paths;
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    for (String path : toDelete) {
+                        fileStorageService.deleteFile(path);
+                    }
+                }
+            });
+        } else {
+            for (String path : paths) {
+                fileStorageService.deleteFile(path);
+            }
+        }
     }
 
     /**

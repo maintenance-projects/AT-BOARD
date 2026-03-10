@@ -71,6 +71,13 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     // 검색: 작성자
     Page<Board> findByCategoryAndAuthorNameContainingIgnoreCaseOrderByCreatedAtDesc(BoardCategory category, String keyword, Pageable pageable);
 
+    // 카테고리 내 게시글 ID/콘텐츠 조회 (카테고리 삭제 시 첨부파일·인라인이미지 정리용)
+    @Query("SELECT b.id FROM Board b WHERE b.category = :category")
+    List<Long> findIdsByCategory(@Param("category") BoardCategory category);
+
+    @Query("SELECT b.content FROM Board b WHERE b.category = :category")
+    List<String> findContentsByCategory(@Param("category") BoardCategory category);
+
     // 신규 게시글 ID + 카테고리 ID (N 배지용)
     @Query("SELECT b.id, b.category.id FROM Board b WHERE b.createdAt > :since")
     List<Object[]> findNewPostIdAndCategoryIdSince(@Param("since") LocalDateTime since);
