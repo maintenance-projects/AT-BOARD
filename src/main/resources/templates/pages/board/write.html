@@ -519,26 +519,51 @@
                     _templateMap[String(_templates[i].id)] = _templates[i].content || '';
                 }
 
-                // 현재 적용된 양식 id (선택 표시 유지용)
+                // 현재 적용된 양식 id/name (선택 표시 유지용)
                 var appliedId = '';
+                var appliedName = '';
+                var titleInput = document.getElementById('title');
 
                 function updateResetBtn() {
                     if (resetBtn) resetBtn.style.display = appliedId ? '' : 'none';
+                }
+
+                // 제목에 [양식이름] 접두사 적용: 기존 [...] 접두사 있으면 교체, 없으면 앞에 추가
+                function applyTitlePrefix(name) {
+                    if (!titleInput) return;
+                    var val = titleInput.value.replace(/^\[[^\]]*\]\s*/, '');
+                    titleInput.value = ('[' + name + '] ' + val).replace(/\s+$/, '');
+                }
+
+                // 제목에서 [양식이름] 접두사 제거
+                function removeTitlePrefix(name) {
+                    if (!titleInput) return;
+                    var prefix = '[' + name + '] ';
+                    var prefix2 = '[' + name + ']';
+                    if (titleInput.value.indexOf(prefix) === 0) {
+                        titleInput.value = titleInput.value.substring(prefix.length);
+                    } else if (titleInput.value.indexOf(prefix2) === 0) {
+                        titleInput.value = titleInput.value.substring(prefix2.length);
+                    }
                 }
 
                 templateSelect.addEventListener('change', function() {
                     var id = this.value;
                     if (!id) {
                         appliedId = '';
+                        appliedName = '';
                         updateResetBtn();
                         return;
                     }
                     var content = _templateMap[id];
                     if (content == null) return;
+                    var name = this.options[this.selectedIndex].text;
 
                     var doApply = function() {
                         quill.root.innerHTML = content;
+                        applyTitlePrefix(name);
                         appliedId = id;
+                        appliedName = name;
                         templateSelect.value = id; // 선택값 유지
                         updateResetBtn();
                         quill.focus();
@@ -553,12 +578,14 @@
                     }
                 });
 
-                // 초기화 버튼: 에디터 비우고 선택값 초기화
+                // 초기화 버튼: 에디터 비우고 선택값 + 제목 접두사 초기화
                 if (resetBtn) {
                     resetBtn.addEventListener('click', function() {
                         var doReset = function() {
                             quill.root.innerHTML = '';
+                            removeTitlePrefix(appliedName);
                             appliedId = '';
+                            appliedName = '';
                             templateSelect.value = '';
                             updateResetBtn();
                         };
