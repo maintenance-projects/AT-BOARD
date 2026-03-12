@@ -91,6 +91,7 @@ public class BoardCategoryService {
             category.setAdminOnly(updatedCategory.getAdminOnly());
             category.setDeptIds(updatedCategory.getDeptIds());
             category.setNotificationEnabled(updatedCategory.getNotificationEnabled());
+            category.setCategorySection(updatedCategory.getCategorySection());
             return boardCategoryRepository.save(category);
         }
         return null;
