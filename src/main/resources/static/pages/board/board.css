@@ -1071,7 +1071,6 @@
     font-size: 15px;
     color: var(--text);
     text-decoration: none;
-    border-bottom: 1px solid var(--line);
     transition: background 0.2s;
 }
 
@@ -1536,12 +1535,7 @@
         padding: 11px 16px;
         font-size: 13px;
         color: var(--text);
-        border-bottom: 1px solid var(--line);
         transition: background 0.15s;
-    }
-
-    .board-sidebar__item:last-child {
-        border-bottom: none;
     }
 
     .board-sidebar__guide {

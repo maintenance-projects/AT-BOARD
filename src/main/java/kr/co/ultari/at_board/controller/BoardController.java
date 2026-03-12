@@ -621,9 +621,13 @@ public class BoardController {
     }
 
     private void autoClassify(BoardCategory c, Map<String, List<BoardCategory>> sections) {
-        if (c.getDeptId() != null || c.isDeptSpecific()) {
+        if (c.getDeptId() != null) {
             sections.get("부서 게시판").add(c);
+        } else if (c.isDeptSpecific()) {
+            // deptId == null && deptSpecific → 다중부서 지정, 뱃지 없음 → 프로젝트 게시판
+            sections.get("프로젝트 게시판").add(c);
         } else {
+            // deptId == null && !deptSpecific → 전사 뱃지 → 전사 게시판
             sections.get("전사 게시판").add(c);
         }
     }
