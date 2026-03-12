@@ -2395,15 +2395,16 @@
 .write-template-wrap {
     display: flex;
     align-items: center;
+    gap: 8px;
 }
 .write-template-wrap .write-select {
     flex: 1;
     min-width: 0;
+    align-self: center;
 }
 .write-template-reset {
     flex-shrink: 0;
-    padding: 4px 10px;
-    margin-right: 10px;
+    padding: 5px 12px;
     border: 1px solid #d1d5db;
     border-radius: 5px;
     background: #f9fafb;

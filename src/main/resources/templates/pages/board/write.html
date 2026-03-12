@@ -558,9 +558,29 @@
                 templateSelect.addEventListener('change', function() {
                     var id = this.value;
                     if (!id) {
-                        appliedId = '';
-                        appliedName = '';
-                        updateResetBtn();
+                        // 양식이 적용된 상태에서 선택 안 함 → 에디터·제목 초기화
+                        if (appliedId) {
+                            var prevId = appliedId;
+                            var prevName = appliedName;
+                            var doReset = function() {
+                                quill.root.innerHTML = '';
+                                removeTitlePrefix(prevName);
+                                appliedId = '';
+                                appliedName = '';
+                                templateSelect.value = '';
+                                updateResetBtn();
+                            };
+                            if (quill.getText().trim().length > 0) {
+                                templateSelect.value = prevId;
+                                showConfirm('에디터 내용을 초기화하시겠습니까?', doReset);
+                            } else {
+                                doReset();
+                            }
+                        } else {
+                            appliedId = '';
+                            appliedName = '';
+                            updateResetBtn();
+                        }
                         return;
                     }
                     var content = _templateMap[id];
