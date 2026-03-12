@@ -41,17 +41,20 @@
 
                 <!-- 글쓰기 양식 선택 -->
                 <div class="write-field write-field--template" th:if="${templates != null and not #lists.isEmpty(templates)}">
-                    <select id="templateSelect" class="write-select write-select--template">
-                        <option value="">양식 선택 (선택 안 함)</option>
-                        <th:block th:each="entry : ${templateGroups}">
-                            <optgroup th:if="${!#strings.isEmpty(entry.key)}" th:label="${entry.key}">
-                                <option th:each="tpl : ${entry.value}" th:value="${tpl.id}" th:text="${tpl.name}">양식명</option>
-                            </optgroup>
-                            <th:block th:unless="${!#strings.isEmpty(entry.key)}">
-                                <option th:each="tpl : ${entry.value}" th:value="${tpl.id}" th:text="${tpl.name}">양식명</option>
+                    <div class="write-template-wrap">
+                        <select id="templateSelect" class="write-select write-select--template">
+                            <option value="">양식 선택 (선택 안 함)</option>
+                            <th:block th:each="entry : ${templateGroups}">
+                                <optgroup th:if="${!#strings.isEmpty(entry.key)}" th:label="${entry.key}">
+                                    <option th:each="tpl : ${entry.value}" th:value="${tpl.id}" th:text="${tpl.name}">양식명</option>
+                                </optgroup>
+                                <th:block th:unless="${!#strings.isEmpty(entry.key)}">
+                                    <option th:each="tpl : ${entry.value}" th:value="${tpl.id}" th:text="${tpl.name}">양식명</option>
+                                </th:block>
                             </th:block>
-                        </th:block>
-                    </select>
+                        </select>
+                        <button type="button" id="templateResetBtn" class="write-template-reset" style="display:none;" title="양식 초기화">초기화</button>
+                    </div>
                 </div>
 
                 <!-- 제목 -->
@@ -507,6 +510,7 @@
         <script th:inline="javascript">
             (function() {
                 var templateSelect = document.getElementById('templateSelect');
+                var resetBtn = document.getElementById('templateResetBtn');
                 if (!templateSelect) return;
 
                 var _templates = /*[[${templates}]]*/ [];
@@ -515,25 +519,56 @@
                     _templateMap[String(_templates[i].id)] = _templates[i].content || '';
                 }
 
+                // 현재 적용된 양식 id (선택 표시 유지용)
+                var appliedId = '';
+
+                function updateResetBtn() {
+                    if (resetBtn) resetBtn.style.display = appliedId ? '' : 'none';
+                }
+
                 templateSelect.addEventListener('change', function() {
                     var id = this.value;
-                    if (!id) return;
+                    if (!id) {
+                        appliedId = '';
+                        updateResetBtn();
+                        return;
+                    }
                     var content = _templateMap[id];
                     if (content == null) return;
 
                     var doApply = function() {
                         quill.root.innerHTML = content;
-                        templateSelect.value = '';
+                        appliedId = id;
+                        templateSelect.value = id; // 선택값 유지
+                        updateResetBtn();
                         quill.focus();
                     };
 
                     if (quill.getText().trim().length > 0) {
+                        // 확인 전까지 선택을 이전 값으로 되돌려 놓음
+                        templateSelect.value = appliedId;
                         showConfirm('기존 내용이 양식으로 교체됩니다. 계속하시겠습니까?', doApply);
-                        templateSelect.value = '';
                     } else {
                         doApply();
                     }
                 });
+
+                // 초기화 버튼: 에디터 비우고 선택값 초기화
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', function() {
+                        var doReset = function() {
+                            quill.root.innerHTML = '';
+                            appliedId = '';
+                            templateSelect.value = '';
+                            updateResetBtn();
+                        };
+                        if (quill.getText().trim().length > 0) {
+                            showConfirm('에디터 내용을 초기화하시겠습니까?', doReset);
+                        } else {
+                            doReset();
+                        }
+                    });
+                }
             })();
         </script>
 
