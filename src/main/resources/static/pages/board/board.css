@@ -2398,8 +2398,8 @@
     gap: 8px;
 }
 .write-template-wrap .write-select {
-    flex: 1;
-    min-width: 0;
+    flex: none;
+    width: auto;
     align-self: center;
 }
 .write-template-reset {
