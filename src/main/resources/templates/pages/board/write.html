@@ -531,8 +531,16 @@
                 // 제목에 [양식이름] 접두사 적용: 기존 [...] 접두사 있으면 교체, 없으면 앞에 추가
                 function applyTitlePrefix(name) {
                     if (!titleInput) return;
-                    var val = titleInput.value.replace(/^\[[^\]]*\]\s*/, '');
-                    titleInput.value = ('[' + name + '] ' + val).replace(/\s+$/, '');
+                    var val = titleInput.value;
+                    // 기존 [xxx] 접두사 제거
+                    if (val.charAt(0) === '[') {
+                        var close = val.indexOf(']');
+                        if (close !== -1) {
+                            val = val.substring(close + 1);
+                            if (val.charAt(0) === ' ') val = val.substring(1);
+                        }
+                    }
+                    titleInput.value = val.length > 0 ? '[' + name + '] ' + val : '[' + name + ']';
                 }
 
                 // 제목에서 [양식이름] 접두사 제거
