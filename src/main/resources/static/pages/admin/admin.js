@@ -32,6 +32,43 @@ function showAlert(message) {
     modal.querySelector('.js-alert-modal__ok').focus();
 }
 
+// 공통 Confirm 모달 (브라우저 confirm 대체)
+function showConfirm(message, onConfirm) {
+    var modal = document.getElementById('js-confirm-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'js-confirm-modal';
+        modal.className = 'js-confirm-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.innerHTML =
+            '<div class="js-confirm-modal__backdrop"></div>' +
+            '<div class="js-confirm-modal__box">' +
+            '<p class="js-confirm-modal__msg"></p>' +
+            '<div class="js-confirm-modal__btns">' +
+            '<button class="js-confirm-modal__cancel btn btn--secondary" type="button">취소</button>' +
+            '<button class="js-confirm-modal__ok btn btn--danger" type="button">확인</button>' +
+            '</div></div>';
+        document.body.appendChild(modal);
+        function closeModal() { modal.classList.remove('js-confirm-modal--open'); }
+        modal.querySelector('.js-confirm-modal__backdrop').addEventListener('click', closeModal);
+        modal.querySelector('.js-confirm-modal__cancel').addEventListener('click', closeModal);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.classList.contains('js-confirm-modal--open')) closeModal();
+        });
+    }
+    modal.querySelector('.js-confirm-modal__msg').textContent = message;
+    var okBtn = modal.querySelector('.js-confirm-modal__ok');
+    var newOk = okBtn.cloneNode(true);
+    okBtn.parentNode.replaceChild(newOk, okBtn);
+    newOk.addEventListener('click', function() {
+        modal.classList.remove('js-confirm-modal--open');
+        if (onConfirm) onConfirm();
+    });
+    modal.classList.add('js-confirm-modal--open');
+    modal.querySelector('.js-confirm-modal__cancel').focus();
+}
+
 // Form validation
 document.addEventListener('DOMContentLoaded', function() {
     const forms = document.querySelectorAll('form');

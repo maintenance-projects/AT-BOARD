@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>글쓰기 양식 관리 - AT-Board Admin</title>
+    <link rel="stylesheet" href="/pages/admin/admin.css" />
+    <link href="/vendor/quill/quill.snow.css" rel="stylesheet">
+    <style>
+        /* ── 워크스페이스 레이아웃 ── */
+        .admin-content { padding: 0; display: flex; flex-direction: column; }
+        .tpl-workspace {
+            display: flex;
+            height: calc(100vh - 113px);
+            overflow: hidden;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        /* ── 좌측 트리 패널 ── */
+        .tpl-tree {
+            width: 280px;
+            min-width: 200px;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            background: #fafafa;
+        }
+        .tpl-tree__header {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #555;
+            background: #f0f0f0;
+            gap: 6px;
+        }
+        .tpl-tree__header-title { flex: 1; }
+        .tpl-tree__body { flex: 1; overflow-y: auto; }
+
+        /* ── 섹션 추가 버튼 (헤더 안) ── */
+        .tpl-add-section-btn {
+            padding: 4px 8px;
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            background: transparent;
+            color: #3b82f6;
+            font-size: 0.78rem;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+        .tpl-add-section-btn:hover { background: #eff6ff; }
+
+        /* ── 섹션 ── */
+        .tpl-section { border-bottom: 1px solid #eee; }
+        .tpl-section__head {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #333;
+            gap: 4px;
+            transition: background 0.1s;
+        }
+        .tpl-section__head:hover { background: #efefef; }
+        .tpl-section__head--drop-target {
+            background: #dbeafe !important;
+            outline: 2px dashed #3b82f6;
+            outline-offset: -2px;
+        }
+        .tpl-section__chevron { font-size: 0.7rem; color: #888; width: 14px; flex-shrink: 0; }
+        .tpl-section__name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tpl-section__actions {
+            display: flex;
+            gap: 2px;
+            flex-shrink: 0;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .tpl-section__head:hover .tpl-section__actions { opacity: 1; }
+        .tpl-section__body { padding-bottom: 4px; }
+
+        /* ── 양식 아이템 ── */
+        .tpl-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px 6px 26px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: #444;
+            gap: 4px;
+            border-left: 2px solid transparent;
+        }
+        .tpl-item:hover { background: #e8f0fe; }
+        .tpl-item.tpl-item--active {
+            background: #dce8fd;
+            border-left-color: #3b82f6;
+            font-weight: 600;
+            color: #1d4ed8;
+        }
+        .tpl-item.tpl-item--dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+        .tpl-item__drag-handle {
+            cursor: grab;
+            color: #bbb;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+            padding: 0 2px;
+            line-height: 1;
+        }
+        .tpl-item__drag-handle:hover { color: #888; }
+        .tpl-item__dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #ccc;
+            flex-shrink: 0;
+        }
+        .tpl-item--active .tpl-item__dot { background: #3b82f6; }
+        .tpl-item__inactive { font-size: 0.72rem; color: #e74c3c; background: #fdecea; padding: 1px 4px; border-radius: 3px; flex-shrink: 0; }
+        .tpl-item__name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tpl-item__actions {
+            display: flex;
+            gap: 2px;
+            flex-shrink: 0;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .tpl-item:hover .tpl-item__actions { opacity: 1; }
+
+        /* ── 공통 아이콘 버튼 ── */
+        .ico-btn {
+            width: 22px; height: 22px;
+            border: none; background: transparent;
+            cursor: pointer; border-radius: 3px;
+            font-size: 0.75rem; color: #666;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0;
+        }
+        .ico-btn:hover { background: rgba(0,0,0,0.08); color: #333; }
+        .ico-btn--danger:hover { background: #fdecea; color: #e74c3c; }
+
+        /* ── 양식 추가 버튼 ── */
+        .tpl-add-item {
+            display: flex; align-items: center; gap: 4px;
+            padding: 5px 10px 5px 28px;
+            font-size: 0.8rem; color: #3b82f6;
+            cursor: pointer; background: transparent;
+            border: none; width: 100%; text-align: left;
+        }
+        .tpl-add-item:hover { background: #e8f0fe; }
+
+        /* ── 컨텍스트 메뉴 ── */
+        .tpl-ctx {
+            position: fixed;
+            z-index: 9999;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+            min-width: 150px;
+            padding: 4px 0;
+            display: none;
+        }
+        .tpl-ctx__item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 14px;
+            font-size: 0.85rem;
+            color: #333;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            gap: 8px;
+        }
+        .tpl-ctx__item:hover { background: #f0f4ff; }
+        .tpl-ctx__item--danger { color: #e74c3c; }
+        .tpl-ctx__item--danger:hover { background: #fdecea; }
+        .tpl-ctx__divider { height: 1px; background: #eee; margin: 4px 0; }
+        .tpl-ctx__arrow { color: #aaa; font-size: 0.7rem; }
+        /* 섹션 이동 서브 목록 */
+        .tpl-ctx__sub {
+            display: none;
+            border-top: 1px solid #eee;
+            margin-top: 4px;
+            padding-top: 2px;
+        }
+        .tpl-ctx__sub.tpl-ctx__sub--open { display: block; }
+        .tpl-ctx__sub-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 14px 6px 22px;
+            font-size: 0.83rem;
+            color: #555;
+            cursor: pointer;
+            gap: 6px;
+        }
+        .tpl-ctx__sub-item:hover { background: #e8f0fe; color: #1d4ed8; }
+        .tpl-ctx__sub-item--active { color: #3b82f6; font-weight: 600; }
+        .tpl-ctx__sub-item--active::before { content: '✓'; margin-left: -14px; margin-right: 4px; font-size: 0.8rem; }
+
+        /* ── 우측 에디터 패널 ── */
+        .tpl-editor {
+            flex: 1; display: flex; flex-direction: column;
+            overflow: hidden; background: #fff;
+        }
+        .tpl-editor__placeholder {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: #aaa; font-size: 0.95rem; gap: 8px;
+        }
+        .tpl-editor__placeholder-icon { font-size: 2.5rem; }
+        .tpl-editor__form { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .tpl-editor__toolbar {
+            padding: 12px 16px; border-bottom: 1px solid #e0e0e0;
+            display: flex; align-items: center; gap: 10px;
+            flex-wrap: wrap; background: #fafafa;
+        }
+        .tpl-editor__name {
+            flex: 1; min-width: 160px;
+            padding: 7px 10px; border: 1px solid #ddd;
+            border-radius: 5px; font-size: 0.9rem;
+        }
+        .tpl-editor__active-label {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 0.85rem; color: #555;
+            cursor: pointer; white-space: nowrap;
+        }
+        .tpl-editor__section-select {
+            padding: 6px 8px; border: 1px solid #ddd;
+            border-radius: 5px; font-size: 0.85rem;
+            color: #444; background: #fff; max-width: 140px;
+        }
+        .tpl-editor__quill-wrap {
+            flex: 1; overflow: hidden; display: flex; flex-direction: column;
+        }
+        .tpl-editor__quill-wrap .ql-toolbar { border: none; border-bottom: 1px solid #e0e0e0; }
+        .tpl-editor__quill-wrap .ql-container { flex: 1; border: none; font-size: 14px; overflow-y: auto; }
+        .tpl-dirty-indicator { font-size: 0.78rem; color: #e67e22; display: none; }
+        .tpl-dirty-indicator.tpl-dirty-indicator--show { display: inline; }
+
+        /* ── 다크모드 ── */
+        @media (prefers-color-scheme: dark) {
+            .tpl-tree { background: #1e1e1e; border-color: #333; }
+            .tpl-tree__header { background: #2a2a2a; border-color: #333; color: #aaa; }
+            .tpl-add-section-btn { border-color: #60a5fa; color: #60a5fa; }
+            .tpl-add-section-btn:hover { background: #1a2a3a; }
+            .tpl-section { border-color: #2a2a2a; }
+            .tpl-section__head { color: #ccc; }
+            .tpl-section__head:hover { background: #2a2a2a; }
+            .tpl-section__head--drop-target { background: #1a2f4a !important; outline-color: #60a5fa; }
+            .tpl-item { color: #bbb; }
+            .tpl-item:hover { background: #1a2a3a; }
+            .tpl-item.tpl-item--active { background: #1a2f4a; border-left-color: #60a5fa; color: #93c5fd; }
+            .tpl-item__dot { background: #555; }
+            .tpl-item--active .tpl-item__dot { background: #60a5fa; }
+            .tpl-item__drag-handle { color: #555; }
+            .tpl-item__drag-handle:hover { color: #aaa; }
+            .tpl-editor { background: #1a1a1a; }
+            .tpl-editor__toolbar { background: #222; border-color: #333; }
+            .tpl-editor__name { background: #2a2a2a; border-color: #444; color: #e0e0e0; }
+            .tpl-editor__active-label { color: #aaa; }
+            .tpl-editor__section-select { background: #2a2a2a; border-color: #444; color: #e0e0e0; }
+            .tpl-workspace { border-color: #333; }
+            .tpl-add-item { color: #60a5fa; }
+            .tpl-add-item:hover { background: #1a2a3a; }
+            .ico-btn { color: #888; }
+            .ico-btn:hover { background: rgba(255,255,255,0.08); color: #ccc; }
+            .ico-btn--danger:hover { background: #3a1a1a; color: #f87171; }
+            .tpl-editor__quill-wrap .ql-toolbar { border-color: #333; background: #2a2a2a; }
+            .tpl-editor__quill-wrap .ql-container { background: #1a1a1a; color: #e0e0e0; }
+            .tpl-editor__quill-wrap .ql-stroke { stroke: #ccc !important; }
+            .tpl-editor__quill-wrap .ql-fill { fill: #ccc !important; }
+            .tpl-editor__quill-wrap .ql-picker-label { color: #ccc; }
+            .tpl-editor__quill-wrap .ql-editor.ql-blank::before { color: #555; }
+            .tpl-ctx { background: #252525; border-color: #444; }
+            .tpl-ctx__item { color: #ddd; }
+            .tpl-ctx__item:hover { background: #1a2a3a; }
+            .tpl-ctx__item--danger { color: #f87171; }
+            .tpl-ctx__item--danger:hover { background: #3a1a1a; }
+            .tpl-ctx__divider { background: #333; }
+            .tpl-ctx__sub { border-color: #333; }
+            .tpl-ctx__sub-item { color: #bbb; }
+            .tpl-ctx__sub-item:hover { background: #1a2a3a; color: #93c5fd; }
+            .tpl-ctx__sub-item--active { color: #60a5fa; }
+        }
+    </style>
+</head>
+<body>
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar__header"><h1>AT-Board Admin</h1></div>
+        <nav class="admin-sidebar__nav">
+            <a href="/admin/dashboard" class="admin-sidebar__link">
+                <span class="admin-sidebar__icon">📊</span>대시보드
+            </a>
+            <a href="/admin/categories" class="admin-sidebar__link">
+                <span class="admin-sidebar__icon">📁</span>게시판 관리
+            </a>
+            <a href="/admin/templates" class="admin-sidebar__link active">
+                <span class="admin-sidebar__icon">📋</span>글쓰기 양식
+            </a>
+            <a href="/admin/boards" class="admin-sidebar__link">
+                <span class="admin-sidebar__icon">📝</span>게시물 관리
+            </a>
+            <a href="/admin/settings" class="admin-sidebar__link">
+                <span class="admin-sidebar__icon">⚙️</span>환경설정
+            </a>
+            <div class="admin-sidebar__divider"></div>
+            <span class="admin-sidebar__section-label">매뉴얼 다운로드</span>
+            <a href="/core/guide/AT_BOARD_테이블정의서.xlsx" class="admin-sidebar__link" download>
+                <span class="admin-sidebar__icon">📥</span>테이블정의서
+            </a>
+            <a href="/core/guide/게시판_사용자_매뉴얼.pptx" class="admin-sidebar__link" download>
+                <span class="admin-sidebar__icon">📥</span>사용자 매뉴얼
+            </a>
+            <a href="/core/guide/관리자페이지_매뉴얼.pptx" class="admin-sidebar__link" download>
+                <span class="admin-sidebar__icon">📥</span>관리자 매뉴얼
+            </a>
+        </nav>
+        <div class="admin-sidebar__footer">
+            <div class="admin-sidebar__user" th:if="${admin}">
+                <span th:text="${admin.adminName}">관리자</span>
+            </div>
+            <a href="/admin/logout" class="admin-sidebar__logout">로그아웃</a>
+        </div>
+    </aside>
+
+    <main class="admin-main">
+        <div class="admin-header">
+            <h2>글쓰기 양식 관리</h2>
+        </div>
+        <div class="admin-content">
+            <div class="tpl-workspace">
+
+                <!-- 좌측: 섹션/양식 트리 -->
+                <div class="tpl-tree">
+                    <div class="tpl-tree__header">
+                        <span class="tpl-tree__header-title">섹션 / 양식</span>
+                        <button class="tpl-add-section-btn" onclick="addSection()">＋ 새 섹션</button>
+                    </div>
+                    <div class="tpl-tree__body" id="tplTreeBody"></div>
+                </div>
+
+                <!-- 우측: 에디터 -->
+                <div class="tpl-editor" id="tplEditor">
+                    <div class="tpl-editor__placeholder" id="editorPlaceholder">
+                        <div class="tpl-editor__placeholder-icon">📋</div>
+                        <div>좌측에서 양식을 선택하세요</div>
+                        <div style="font-size:0.8rem;color:#bbb;">양식을 클릭하면 이곳에서 편집할 수 있습니다</div>
+                    </div>
+                    <div class="tpl-editor__form" id="editorForm" style="display:none;">
+                        <div class="tpl-editor__toolbar">
+                            <input type="text" id="tplNameInput" class="tpl-editor__name" placeholder="양식명">
+                            <select id="tplSectionSelect" class="tpl-editor__section-select" title="섹션 이동">
+                                <!-- JS로 채워짐 -->
+                            </select>
+                            <label class="tpl-editor__active-label">
+                                <input type="checkbox" id="tplIsActiveInput"> 활성
+                            </label>
+                            <span class="tpl-dirty-indicator" id="dirtyIndicator">● 미저장</span>
+                            <button class="btn btn--primary btn--sm" onclick="saveTemplate()">저장</button>
+                            <button class="btn btn--secondary btn--sm" onclick="cancelEdit()">취소</button>
+                        </div>
+                        <div class="tpl-editor__quill-wrap">
+                            <div id="quillEditor"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 컨텍스트 메뉴 (공유, 단일 인스턴스) -->
+<div class="tpl-ctx" id="tplCtxMenu">
+    <button class="tpl-ctx__item" id="ctxMoveUp" type="button">↑ 위로</button>
+    <button class="tpl-ctx__item" id="ctxMoveDown" type="button">↓ 아래로</button>
+    <div class="tpl-ctx__divider"></div>
+    <button class="tpl-ctx__item" id="ctxMoveSec" type="button">
+        <span>섹션 이동</span><span class="tpl-ctx__arrow" id="ctxMoveSecArrow">▶</span>
+    </button>
+    <div class="tpl-ctx__sub" id="ctxSecList"></div>
+    <div class="tpl-ctx__divider"></div>
+    <button class="tpl-ctx__item tpl-ctx__item--danger" id="ctxDelete" type="button">삭제</button>
+</div>
+
+<script src="/vendor/quill/quill.min.js"></script>
+<script src="/pages/admin/admin.js"></script>
+<script>
+(function () {
+    var API = '/admin/api/templates';
+    var state = { selectedId: null, dirty: false, openSections: {} };
+    var lastSections = [];
+    var ctxState = { templateId: null, subOpen: false };
+    var quill = null;
+
+    // ── Quill 초기화 ──────────────────────────────────
+
+    function initQuill() {
+        quill = new Quill('#quillEditor', {
+            theme: 'snow',
+            placeholder: '양식 내용을 입력하세요',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            }
+        });
+        quill.on('text-change', function () { setDirty(true); });
+    }
+
+    // ── 상태 관리 ─────────────────────────────────────
+
+    function setDirty(flag) {
+        state.dirty = flag;
+        var el = document.getElementById('dirtyIndicator');
+        if (el) el.classList.toggle('tpl-dirty-indicator--show', flag);
+    }
+
+    function confirmLeave() {
+        return state.dirty ? confirm('저장하지 않은 내용이 있습니다. 계속하시겠습니까?') : true;
+    }
+
+    // ── 트리 로드 ─────────────────────────────────────
+
+    function loadTree(keepSelected) {
+        fetch(API + '/tree')
+            .then(function (r) { return r.json(); })
+            .then(function (sections) {
+                lastSections = sections;
+                sections.forEach(function (sec) {
+                    if (state.openSections[sec.id] === undefined) state.openSections[sec.id] = true;
+                });
+                renderTree(sections);
+                updateSectionSelect(sections);
+                if (keepSelected && state.selectedId) {
+                    document.querySelectorAll('.tpl-item[data-id="' + state.selectedId + '"]').forEach(function (el) {
+                        el.classList.add('tpl-item--active');
+                    });
+                }
+            })
+            .catch(function () { showAlert('트리 로드에 실패했습니다.'); });
+    }
+
+    // ── 트리 렌더링 ───────────────────────────────────
+
+    function renderTree(sections) {
+        var body = document.getElementById('tplTreeBody');
+        body.innerHTML = '';
+
+        sections.forEach(function (sec) {
+            var isOpen = state.openSections[sec.id] !== false;
+            var isUnsectioned = sec.id === null;
+
+            var secEl = document.createElement('div');
+            secEl.className = 'tpl-section';
+
+            // 섹션 헤더 (드롭 타겟)
+            var head = document.createElement('div');
+            head.className = 'tpl-section__head';
+            head.innerHTML =
+                '<span class="tpl-section__chevron">' + (isOpen ? '▼' : '▶') + '</span>' +
+                '<span class="tpl-section__name">' + esc(sec.name) + '</span>' +
+                (isUnsectioned ? '' :
+                '<div class="tpl-section__actions">' +
+                  '<button class="ico-btn" title="양식 추가" onclick="addTemplate(' + sec.id + ',event)">＋</button>' +
+                  '<button class="ico-btn" title="위로" onclick="moveSection(' + sec.id + ',\'up\',event)">↑</button>' +
+                  '<button class="ico-btn" title="아래로" onclick="moveSection(' + sec.id + ',\'down\',event)">↓</button>' +
+                  '<button class="ico-btn" title="이름 수정" onclick="renameSection(' + sec.id + ',\'' + esc(sec.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\',event)">✎</button>' +
+                  '<button class="ico-btn ico-btn--danger" title="삭제" onclick="deleteSection(' + sec.id + ',event)">✕</button>' +
+                '</div>');
+
+            // 헤더 클릭: 토글 (섹션 액션 버튼 클릭 시 버블링 방지됨)
+            head.addEventListener('click', function () {
+                state.openSections[sec.id] = !(state.openSections[sec.id] !== false);
+                renderTree(lastSections);
+                updateSectionSelect(lastSections);
+                if (state.selectedId) {
+                    document.querySelectorAll('.tpl-item[data-id="' + state.selectedId + '"]').forEach(function (el) {
+                        el.classList.add('tpl-item--active');
+                    });
+                }
+            });
+
+            // 드롭 타겟 설정
+            setupSectionDropTarget(head, sec.id);
+
+            // 양식 목록
+            var bodyEl = document.createElement('div');
+            bodyEl.className = 'tpl-section__body';
+            bodyEl.style.display = isOpen ? '' : 'none';
+
+            sec.templates.forEach(function (tpl) {
+                var item = createTemplateItem(tpl, sec.id);
+                bodyEl.appendChild(item);
+            });
+
+            if (!isUnsectioned) {
+                var addBtn = document.createElement('button');
+                addBtn.className = 'tpl-add-item';
+                addBtn.textContent = '＋ 양식 추가';
+                addBtn.addEventListener('click', function () { addTemplate(sec.id, null); });
+                bodyEl.appendChild(addBtn);
+            }
+
+            secEl.appendChild(head);
+            secEl.appendChild(bodyEl);
+            body.appendChild(secEl);
+        });
+    }
+
+    function createTemplateItem(tpl, sectionId) {
+        var item = document.createElement('div');
+        item.className = 'tpl-item' + (tpl.id === state.selectedId ? ' tpl-item--active' : '');
+        item.setAttribute('data-id', tpl.id);
+        item.setAttribute('data-section-id', sectionId !== null && sectionId !== undefined ? sectionId : '');
+        item.setAttribute('draggable', 'true');
+
+        item.innerHTML =
+            '<span class="tpl-item__drag-handle" title="드래그하여 섹션 이동">⠿</span>' +
+            '<span class="tpl-item__dot"></span>' +
+            '<span class="tpl-item__name">' + esc(tpl.name) + '</span>' +
+            (tpl.isActive ? '' : '<span class="tpl-item__inactive">비활성</span>') +
+            '<div class="tpl-item__actions">' +
+              '<button class="ico-btn" title="위로" onclick="moveTemplate(' + tpl.id + ',\'up\',event)">↑</button>' +
+              '<button class="ico-btn" title="아래로" onclick="moveTemplate(' + tpl.id + ',\'down\',event)">↓</button>' +
+              '<button class="ico-btn" title="더보기" onclick="openCtxMenu(' + tpl.id + ',' + (sectionId !== null ? sectionId : 'null') + ',event)">⋮</button>' +
+            '</div>';
+
+        // 선택 (드래그 핸들, 액션 클릭 시 선택 방지)
+        item.addEventListener('click', function (e) {
+            if (e.target.closest('.tpl-item__actions') || e.target.classList.contains('tpl-item__drag-handle')) return;
+            selectTemplate(tpl.id);
+        });
+
+        // 드래그 앤 드롭 설정
+        setupTemplateDrag(item, tpl.id);
+
+        return item;
+    }
+
+    // ── 드래그 앤 드롭 ────────────────────────────────
+
+    var draggingId = null;
+
+    function setupTemplateDrag(item, tplId) {
+        item.addEventListener('dragstart', function (e) {
+            draggingId = tplId;
+            item.classList.add('tpl-item--dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', tplId);
+        });
+        item.addEventListener('dragend', function () {
+            draggingId = null;
+            item.classList.remove('tpl-item--dragging');
+            // 모든 드롭 하이라이트 제거
+            document.querySelectorAll('.tpl-section__head--drop-target').forEach(function (el) {
+                el.classList.remove('tpl-section__head--drop-target');
+            });
+        });
+    }
+
+    function setupSectionDropTarget(head, secId) {
+        head.addEventListener('dragover', function (e) {
+            if (draggingId === null) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            head.classList.add('tpl-section__head--drop-target');
+        });
+        head.addEventListener('dragleave', function (e) {
+            if (!head.contains(e.relatedTarget)) {
+                head.classList.remove('tpl-section__head--drop-target');
+            }
+        });
+        head.addEventListener('drop', function (e) {
+            e.preventDefault();
+            head.classList.remove('tpl-section__head--drop-target');
+            var id = draggingId;
+            draggingId = null;
+            if (id === null) return;
+            moveToSection(id, secId);
+        });
+    }
+
+    function moveToSection(templateId, newSectionId) {
+        fetch(API + '/' + templateId + '/move-section', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sectionId: newSectionId })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.success) {
+                    if (newSectionId !== null && newSectionId !== undefined) {
+                        state.openSections[newSectionId] = true;
+                    }
+                    loadTree(state.selectedId === templateId);
+                    // 에디터가 열려 있으면 섹션 셀렉트 갱신
+                    if (state.selectedId === templateId) {
+                        setTimeout(function () { updateSectionSelect(lastSections, newSectionId); }, 300);
+                    }
+                } else {
+                    showAlert(res.message || '섹션 이동에 실패했습니다.');
+                }
+            })
+            .catch(function () { showAlert('섹션 이동 중 오류가 발생했습니다.'); });
+    }
+
+    // ── 컨텍스트 메뉴 ─────────────────────────────────
+
+    function openCtxMenu(templateId, currentSectionId, event) {
+        event.stopPropagation();
+        ctxState.templateId = templateId;
+        ctxState.subOpen = false;
+
+        // 서브메뉴 초기화
+        var subList = document.getElementById('ctxSecList');
+        subList.innerHTML = '';
+        subList.classList.remove('tpl-ctx__sub--open');
+        document.getElementById('ctxMoveSecArrow').textContent = '▶';
+
+        // 섹션 목록 채우기
+        var noneItem = document.createElement('div');
+        noneItem.className = 'tpl-ctx__sub-item' + (currentSectionId === null || currentSectionId === '' || currentSectionId === undefined ? ' tpl-ctx__sub-item--active' : '');
+        noneItem.textContent = '(섹션 없음)';
+        noneItem.addEventListener('click', function (e) {
+            e.stopPropagation();
+            closeCtxMenu();
+            moveToSection(templateId, null);
+        });
+        subList.appendChild(noneItem);
+
+        lastSections.forEach(function (sec) {
+            if (sec.id === null) return;
+            var si = document.createElement('div');
+            var isCurrent = (sec.id === currentSectionId || sec.id == currentSectionId);
+            si.className = 'tpl-ctx__sub-item' + (isCurrent ? ' tpl-ctx__sub-item--active' : '');
+            si.textContent = sec.name;
+            si.addEventListener('click', function (e) {
+                e.stopPropagation();
+                closeCtxMenu();
+                moveToSection(templateId, sec.id);
+            });
+            subList.appendChild(si);
+        });
+
+        // 위로/아래로 버튼
+        document.getElementById('ctxMoveUp').onclick = function (e) {
+            e.stopPropagation();
+            closeCtxMenu();
+            moveTemplate(templateId, 'up', null);
+        };
+        document.getElementById('ctxMoveDown').onclick = function (e) {
+            e.stopPropagation();
+            closeCtxMenu();
+            moveTemplate(templateId, 'down', null);
+        };
+        // 섹션 이동 토글
+        document.getElementById('ctxMoveSec').onclick = function (e) {
+            e.stopPropagation();
+            ctxState.subOpen = !ctxState.subOpen;
+            subList.classList.toggle('tpl-ctx__sub--open', ctxState.subOpen);
+            document.getElementById('ctxMoveSecArrow').textContent = ctxState.subOpen ? '▼' : '▶';
+            repositionMenu(event);
+        };
+        // 삭제
+        document.getElementById('ctxDelete').onclick = function (e) {
+            e.stopPropagation();
+            closeCtxMenu();
+            deleteTemplate(templateId, null);
+        };
+
+        // 메뉴 표시 및 위치 조정
+        var menu = document.getElementById('tplCtxMenu');
+        menu.style.display = 'block';
+        repositionMenu(event);
+    }
+
+    function repositionMenu(event) {
+        var menu = document.getElementById('tplCtxMenu');
+        var x = event.clientX;
+        var y = event.clientY;
+        var mw = menu.offsetWidth || 170;
+        var mh = menu.offsetHeight || 180;
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        if (x + mw > vw - 8) x = vw - mw - 8;
+        if (y + mh > vh - 8) y = vh - mh - 8;
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+    }
+
+    function closeCtxMenu() {
+        var menu = document.getElementById('tplCtxMenu');
+        menu.style.display = 'none';
+        ctxState.templateId = null;
+        ctxState.subOpen = false;
+        var subList = document.getElementById('ctxSecList');
+        subList.classList.remove('tpl-ctx__sub--open');
+        document.getElementById('ctxMoveSecArrow').textContent = '▶';
+    }
+
+    // 외부 클릭 시 메뉴 닫기
+    document.addEventListener('click', function (e) {
+        var menu = document.getElementById('tplCtxMenu');
+        if (menu && menu.style.display !== 'none' && !menu.contains(e.target)) {
+            closeCtxMenu();
+        }
+    });
+
+    // ── 섹션 셀렉트 (에디터 우측 패널) ──────────────
+
+    function updateSectionSelect(sections, currentSectionId) {
+        var sel = document.getElementById('tplSectionSelect');
+        if (!sel) return;
+        var prev = currentSectionId !== undefined ? currentSectionId
+                  : (sel.value !== '' ? parseInt(sel.value) || null : null);
+        sel.innerHTML = '<option value="">(섹션 없음)</option>';
+        sections.forEach(function (sec) {
+            if (sec.id === null) return;
+            var opt = document.createElement('option');
+            opt.value = sec.id;
+            opt.textContent = sec.name;
+            sel.appendChild(opt);
+        });
+        sel.value = (prev !== null && prev !== undefined) ? prev : '';
+    }
+
+    // ── 양식 선택 & 에디터 로드 ──────────────────────
+
+    function selectTemplate(id) {
+        if (state.selectedId === id) return;
+        if (!confirmLeave()) return;
+        fetch(API + '/' + id)
+            .then(function (r) { return r.json(); })
+            .then(function (tpl) {
+                state.selectedId = id;
+                setDirty(false);
+                document.getElementById('editorPlaceholder').style.display = 'none';
+                document.getElementById('editorForm').style.display = 'flex';
+                document.getElementById('tplNameInput').value = tpl.name;
+                document.getElementById('tplIsActiveInput').checked = tpl.isActive;
+                quill.root.innerHTML = tpl.content || '';
+                updateSectionSelect(lastSections, tpl.sectionId);
+                document.querySelectorAll('.tpl-item').forEach(function (el) {
+                    el.classList.toggle('tpl-item--active', parseInt(el.getAttribute('data-id')) === id);
+                });
+                setDirty(false);
+            })
+            .catch(function () { showAlert('양식 로드에 실패했습니다.'); });
+    }
+
+    // ── 저장 / 취소 ───────────────────────────────────
+
+    window.saveTemplate = function () {
+        if (!state.selectedId) return;
+        var name = document.getElementById('tplNameInput').value.trim();
+        if (!name) { showAlert('양식명을 입력하세요.'); return; }
+        var isActive = document.getElementById('tplIsActiveInput').checked;
+        var content = quill.root.innerHTML;
+        var secSel = document.getElementById('tplSectionSelect');
+        var sectionId = secSel && secSel.value !== '' ? parseInt(secSel.value) : null;
+
+        fetch(API + '/' + state.selectedId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, content: content, isActive: isActive, sectionId: sectionId })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.success) { setDirty(false); loadTree(true); }
+                else { showAlert(res.message || '저장에 실패했습니다.'); }
+            })
+            .catch(function () { showAlert('저장 중 오류가 발생했습니다.'); });
+    };
+
+    window.cancelEdit = function () {
+        if (!confirmLeave()) return;
+        state.selectedId = null;
+        setDirty(false);
+        document.getElementById('editorForm').style.display = 'none';
+        document.getElementById('editorPlaceholder').style.display = 'flex';
+        document.querySelectorAll('.tpl-item').forEach(function (el) { el.classList.remove('tpl-item--active'); });
+    };
+
+    // ── 섹션 조작 ─────────────────────────────────────
+
+    window.addSection = function () {
+        var name = prompt('새 섹션명을 입력하세요:');
+        if (!name || !name.trim()) return;
+        fetch(API + '/sections', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name.trim() })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.success) loadTree(true);
+                else showAlert(res.message || '섹션 추가에 실패했습니다.');
+            })
+            .catch(function () { showAlert('섹션 추가 중 오류가 발생했습니다.'); });
+    };
+
+    window.renameSection = function (id, currentName, event) {
+        if (event) event.stopPropagation();
+        var name = prompt('섹션명을 수정하세요:', currentName);
+        if (!name || !name.trim()) return;
+        fetch(API + '/sections/' + id, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name.trim() })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.success) loadTree(true);
+                else showAlert(res.message || '수정에 실패했습니다.');
+            })
+            .catch(function () { showAlert('수정 중 오류가 발생했습니다.'); });
+    };
+
+    window.deleteSection = function (id, event) {
+        if (event) event.stopPropagation();
+        if (!confirm('이 섹션을 삭제하시겠습니까?\n섹션에 양식이 있으면 삭제할 수 없습니다.')) return;
+        fetch(API + '/sections/' + id, { method: 'DELETE' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.success) loadTree(true);
+                else showAlert(res.message || '삭제에 실패했습니다.');
+            })
+            .catch(function () { showAlert('삭제 중 오류가 발생했습니다.'); });
+    };
+
+    window.moveSection = function (id, dir, event) {
+        if (event) event.stopPropagation();
+        fetch(API + '/sections/' + id + '/' + dir, { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function () { loadTree(true); })
+            .catch(function () { showAlert('순서 변경에 실패했습니다.'); });
+    };
+
+    // ── 양식 조작 ─────────────────────────────────────
+
+    window.addTemplate = function (sectionId, event) {
+        if (event) event.stopPropagation();
+        var name = prompt('새 양식명을 입력하세요:');
+        if (!name || !name.trim()) return;
+        fetch(API, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sectionId: sectionId, name: name.trim() })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.success) {
+                    state.openSections[sectionId] = true;
+                    loadTree(false);
+                    setTimeout(function () { selectTemplate(res.id); }, 400);
+                } else {
+                    showAlert(res.message || '양식 추가에 실패했습니다.');
+                }
+            })
+            .catch(function () { showAlert('양식 추가 중 오류가 발생했습니다.'); });
+    };
+
+    window.deleteTemplate = function (id, event) {
+        if (event) event.stopPropagation();
+        if (!confirm('이 양식을 삭제하시겠습니까?')) return;
+        fetch(API + '/' + id, { method: 'DELETE' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.success) {
+                    if (state.selectedId === id) {
+                        state.selectedId = null;
+                        setDirty(false);
+                        document.getElementById('editorForm').style.display = 'none';
+                        document.getElementById('editorPlaceholder').style.display = 'flex';
+                    }
+                    loadTree(false);
+                } else {
+                    showAlert(res.message || '삭제에 실패했습니다.');
+                }
+            })
+            .catch(function () { showAlert('삭제 중 오류가 발생했습니다.'); });
+    };
+
+    window.moveTemplate = function (id, dir, event) {
+        if (event) event.stopPropagation();
+        fetch(API + '/' + id + '/' + dir, { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function () { loadTree(true); })
+            .catch(function () { showAlert('순서 변경에 실패했습니다.'); });
+    };
+
+    // ── 유틸 ──────────────────────────────────────────
+
+    function esc(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ── 초기화 ────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initQuill();
+        loadTree(false);
+
+        document.getElementById('tplNameInput').addEventListener('input', function () { setDirty(true); });
+        document.getElementById('tplIsActiveInput').addEventListener('change', function () { setDirty(true); });
+        document.getElementById('tplSectionSelect').addEventListener('change', function () { setDirty(true); });
+    });
+
+    window.addEventListener('beforeunload', function (e) {
+        if (state.dirty) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    window.selectTemplate = selectTemplate;
+    window.openCtxMenu = openCtxMenu;
+
+})();
+</script>
+</body>
+</html>

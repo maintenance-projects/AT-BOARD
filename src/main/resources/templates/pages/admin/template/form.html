@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit ? '양식 수정' : '양식 생성'} + ' - AT-Board Admin'">글쓰기 양식 - AT-Board Admin</title>
+    <link rel="stylesheet" href="/pages/admin/admin.css" />
+    <link href="/vendor/quill/quill.snow.css" rel="stylesheet">
+    <style>
+        .template-form { max-width: 900px; }
+        .template-form .form-group { margin-bottom: 20px; }
+        .template-form .form-label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+        .template-form .form-input { width: 100%; box-sizing: border-box; }
+        .template-form .form-input--sm { width: 120px; }
+        .quill-admin-wrap { border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
+        .quill-admin-wrap .ql-toolbar { border-bottom: 1px solid #ddd; }
+        .quill-admin-wrap .ql-container { min-height: 300px; font-size: 14px; }
+        @media (prefers-color-scheme: dark) {
+            .quill-admin-wrap { border-color: #444; }
+            .quill-admin-wrap .ql-toolbar { border-color: #444; background: #2a2a2a; }
+            .quill-admin-wrap .ql-container { background: #1e1e1e; color: #e0e0e0; }
+            .quill-admin-wrap .ql-editor.ql-blank::before { color: #666; }
+            .quill-admin-wrap .ql-stroke { stroke: #ccc !important; }
+            .quill-admin-wrap .ql-fill { fill: #ccc !important; }
+            .quill-admin-wrap .ql-picker-label { color: #ccc; }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar__header">
+                <h1>AT-Board Admin</h1>
+            </div>
+            <nav class="admin-sidebar__nav">
+                <a href="/admin/dashboard" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📊</span>
+                    대시보드
+                </a>
+                <a href="/admin/categories" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📁</span>
+                    게시판 관리
+                </a>
+                <a href="/admin/templates" class="admin-sidebar__link active">
+                    <span class="admin-sidebar__icon">📋</span>
+                    글쓰기 양식
+                </a>
+                <a href="/admin/boards" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">📝</span>
+                    게시물 관리
+                </a>
+                <a href="/admin/settings" class="admin-sidebar__link">
+                    <span class="admin-sidebar__icon">⚙️</span>
+                    환경설정
+                </a>
+                <div class="admin-sidebar__divider"></div>
+                <span class="admin-sidebar__section-label">매뉴얼 다운로드</span>
+                <a href="/core/guide/AT_BOARD_테이블정의서.xlsx" class="admin-sidebar__link" download>
+                    <span class="admin-sidebar__icon">📥</span>
+                    테이블정의서
+                </a>
+                <a href="/core/guide/게시판_사용자_매뉴얼.pptx" class="admin-sidebar__link" download>
+                    <span class="admin-sidebar__icon">📥</span>
+                    사용자 매뉴얼
+                </a>
+                <a href="/core/guide/관리자페이지_매뉴얼.pptx" class="admin-sidebar__link" download>
+                    <span class="admin-sidebar__icon">📥</span>
+                    관리자 매뉴얼
+                </a>
+            </nav>
+            <div class="admin-sidebar__footer">
+                <div class="admin-sidebar__user" th:if="${admin}">
+                    <span th:text="${admin.adminName}">관리자</span>
+                </div>
+                <a href="/admin/logout" class="admin-sidebar__logout">로그아웃</a>
+            </div>
+        </aside>
+
+        <main class="admin-main">
+            <div class="admin-header">
+                <h2 th:text="${isEdit ? '양식 수정' : '양식 생성'}">양식 생성</h2>
+                <div class="admin-header__actions">
+                    <a href="/admin/templates" class="btn btn--secondary">목록으로</a>
+                </div>
+            </div>
+
+            <div class="admin-content">
+                <form th:action="${isEdit ? '/admin/templates/edit/' + template.id : '/admin/templates/new'}"
+                      method="post" id="templateForm" class="template-form">
+
+                    <!-- 양식명 -->
+                    <div class="form-group">
+                        <label class="form-label" for="name">양식명 <span style="color: #e74c3c;">*</span></label>
+                        <input type="text" id="name" name="name" class="form-input"
+                               th:value="${template != null ? template.name : ''}"
+                               placeholder="양식명을 입력하세요" required maxlength="100" />
+                    </div>
+
+                    <!-- 섹션(카테고리) -->
+                    <div class="form-group">
+                        <label class="form-label" for="category">섹션</label>
+                        <input type="text" id="category" name="category" class="form-input"
+                               th:value="${template != null ? template.category : ''}"
+                               placeholder="예: 업무, 경조사, 기타" maxlength="50"
+                               list="categoryList" autocomplete="off" />
+                        <datalist id="categoryList">
+                            <option th:each="cat : ${categories}" th:value="${cat}"></option>
+                        </datalist>
+                        <span style="color: #888; font-size: 0.85rem; margin-left: 4px;">같은 섹션명끼리 드롭다운에서 묶여 표시됩니다. 비워두면 묶이지 않습니다.</span>
+                    </div>
+
+                    <!-- 내용 -->
+                    <div class="form-group">
+                        <label class="form-label">양식 내용</label>
+                        <div class="quill-admin-wrap">
+                            <div id="editor"></div>
+                        </div>
+                        <textarea id="content" name="content" style="display:none;"
+                                  th:text="${template != null ? template.content : ''}"></textarea>
+                    </div>
+
+                    <!-- 정렬순서 -->
+                    <div class="form-group">
+                        <label class="form-label" for="sortOrder">정렬순서</label>
+                        <input type="number" id="sortOrder" name="sortOrder" class="form-input form-input--sm"
+                               th:value="${template != null ? template.sortOrder : ''}"
+                               placeholder="숫자" min="0" />
+                        <span style="color: #888; font-size: 0.85rem; margin-left: 8px;">숫자가 작을수록 위에 표시 (미입력 시 이름순)</span>
+                    </div>
+
+                    <!-- 활성화 -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="isActive" name="isActive" value="true"
+                                   th:checked="${template == null || template.isActive}" />
+                            활성화 (비활성 시 글쓰기 화면에 표시되지 않음)
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <a href="/admin/templates" class="btn btn--secondary">취소</a>
+                        <button type="submit" class="btn btn--primary" th:text="${isEdit ? '수정' : '등록'}">등록</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="/vendor/quill/quill.min.js"></script>
+    <script th:inline="javascript">
+        var initialContent = /*[[${template != null ? template.content : ''}]]*/ '';
+
+        var quill = new Quill('#editor', {
+            theme: 'snow',
+            placeholder: '양식 내용을 입력하세요',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            }
+        });
+
+        if (initialContent) {
+            quill.root.innerHTML = initialContent;
+        }
+
+        document.getElementById('templateForm').addEventListener('submit', function(e) {
+            var name = document.getElementById('name').value.trim();
+            if (!name) {
+                e.preventDefault();
+                alert('양식명을 입력하세요.');
+                return;
+            }
+            document.getElementById('content').value = quill.root.innerHTML;
+        });
+    </script>
+    <script src="/pages/admin/admin.js"></script>
+</body>
+</html>

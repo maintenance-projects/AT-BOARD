@@ -3,6 +3,7 @@ package kr.co.ultari.at_board.controller;
 import kr.co.ultari.at_board.model.primary.Board;
 import kr.co.ultari.at_board.model.primary.BoardAttachment;
 import kr.co.ultari.at_board.model.primary.BoardCategory;
+import kr.co.ultari.at_board.model.primary.BoardTemplate;
 import kr.co.ultari.at_board.model.primary.Comment;
 import kr.co.ultari.at_board.model.secondary.User;
 import kr.co.ultari.at_board.service.AppSettingService;
@@ -10,6 +11,7 @@ import kr.co.ultari.at_board.service.BoardAttachmentService;
 import kr.co.ultari.at_board.service.BoardCategoryService;
 import kr.co.ultari.at_board.service.BoardLikeService;
 import kr.co.ultari.at_board.service.BoardService;
+import kr.co.ultari.at_board.service.BoardTemplateService;
 import kr.co.ultari.at_board.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +52,7 @@ public class BoardController {
     private final BoardLikeService boardLikeService;
     private final BoardAttachmentService boardAttachmentService;
     private final AppSettingService appSettingService;
+    private final BoardTemplateService boardTemplateService;
 
     @GetMapping
     public String list(@RequestParam(required = false) Long categoryId,
@@ -272,6 +275,9 @@ public class BoardController {
         model.addAttribute("maxAttachmentSizeMb", appSettingService.getMaxAttachmentSize() / (1024 * 1024));
         model.addAttribute("blockedExtensionsStr", String.join(",", appSettingService.getBlockedExtensions()));
         model.addAttribute("retentionRules", appSettingService.getRetentionRules());
+        List<BoardTemplate> activeTemplates = boardTemplateService.getActiveTemplates();
+        model.addAttribute("templates", activeTemplates);
+        model.addAttribute("templateGroups", boardTemplateService.getActiveTemplatesGrouped());
         return "pages/board/write";
     }
 

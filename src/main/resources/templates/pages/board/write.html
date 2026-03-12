@@ -39,6 +39,21 @@
                     </select>
                 </div>
 
+                <!-- 글쓰기 양식 선택 -->
+                <div class="write-field write-field--template" th:if="${templates != null and not #lists.isEmpty(templates)}">
+                    <select id="templateSelect" class="write-select write-select--template">
+                        <option value="">양식 선택 (선택 안 함)</option>
+                        <th:block th:each="entry : ${templateGroups}">
+                            <optgroup th:if="${!#strings.isEmpty(entry.key)}" th:label="${entry.key}">
+                                <option th:each="tpl : ${entry.value}" th:value="${tpl.id}" th:text="${tpl.name}">양식명</option>
+                            </optgroup>
+                            <th:block th:unless="${!#strings.isEmpty(entry.key)}">
+                                <option th:each="tpl : ${entry.value}" th:value="${tpl.id}" th:text="${tpl.name}">양식명</option>
+                            </th:block>
+                        </th:block>
+                    </select>
+                </div>
+
                 <!-- 제목 -->
                 <div class="write-field write-field--title">
                     <input
@@ -354,8 +369,10 @@
                 if (_topCollapsed) return;
                 _topCollapsed = true;
                 var catEl = document.querySelector('.write-field--category');
+                var tplEl = document.querySelector('.write-field--template');
                 var titleEl = document.querySelector('.write-field--title');
                 if (catEl) catEl.classList.add('write-field--collapsed');
+                if (tplEl) tplEl.classList.add('write-field--collapsed');
                 if (titleEl) titleEl.classList.add('write-field--collapsed');
                 setTimeout(adjustEditorHeight, 260);
             }
@@ -364,8 +381,10 @@
                 if (!_topCollapsed) return;
                 _topCollapsed = false;
                 var catEl = document.querySelector('.write-field--category');
+                var tplEl = document.querySelector('.write-field--template');
                 var titleEl = document.querySelector('.write-field--title');
                 if (catEl) catEl.classList.remove('write-field--collapsed');
+                if (tplEl) tplEl.classList.remove('write-field--collapsed');
                 if (titleEl) titleEl.classList.remove('write-field--collapsed');
                 setTimeout(adjustEditorHeight, 260);
             }
@@ -482,6 +501,40 @@
                 return promise;
             }
 
+        </script>
+
+        <!-- 글쓰기 양식 선택 스크립트 -->
+        <script th:inline="javascript">
+            (function() {
+                var templateSelect = document.getElementById('templateSelect');
+                if (!templateSelect) return;
+
+                var _templates = /*[[${templates}]]*/ [];
+                var _templateMap = {};
+                for (var i = 0; i < _templates.length; i++) {
+                    _templateMap[String(_templates[i].id)] = _templates[i].content || '';
+                }
+
+                templateSelect.addEventListener('change', function() {
+                    var id = this.value;
+                    if (!id) return;
+                    var content = _templateMap[id];
+                    if (content == null) return;
+
+                    var doApply = function() {
+                        quill.root.innerHTML = content;
+                        templateSelect.value = '';
+                        quill.focus();
+                    };
+
+                    if (quill.getText().trim().length > 0) {
+                        showConfirm('기존 내용이 양식으로 교체됩니다. 계속하시겠습니까?', doApply);
+                        templateSelect.value = '';
+                    } else {
+                        doApply();
+                    }
+                });
+            })();
         </script>
 
         <!-- 첨부파일 + 폼 제출 스크립트 -->
