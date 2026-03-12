@@ -73,6 +73,10 @@ public class BoardCategory {
     @Column(name = "UPDATED_AT", nullable = false)
     private LocalDateTime updatedAt;
 
+    /** 섹션 분류 (null=자동, "프로젝트 게시판" 등) */
+    @Column(name = "CATEGORY_SECTION", length = 50)
+    private String categorySection;
+
     /** 부서 전용 여부 */
     @Transient
     public boolean isDeptSpecific() {

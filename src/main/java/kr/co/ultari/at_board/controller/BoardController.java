@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,6 +75,7 @@ public class BoardController {
         if (categories.isEmpty()) {
             model.addAttribute("boards", Page.empty());
             model.addAttribute("categories", categories);
+            model.addAttribute("categorySections", new LinkedHashMap<>());
             model.addAttribute("currentUser", currentUser);
             return "pages/board/list";
         }
@@ -111,6 +113,7 @@ public class BoardController {
 
         model.addAttribute("boards", boardsPage);
         model.addAttribute("categories", categories);
+        model.addAttribute("categorySections", buildCategorySections(categories));
         model.addAttribute("selectedCategory", selectedCategory);
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("searchType", searchType);
@@ -582,6 +585,47 @@ public class BoardController {
             range.add(totalPages - 1);
         }
         return range;
+    }
+
+    /**
+     * 카테고리를 섹션별로 그룹핑: 전사 게시판 → 부서 게시판 → 프로젝트 게시판
+     * categorySection 필드가 설정된 경우 해당 섹션으로 분류, 없으면 deptId/deptSpecific 기준 자동 분류
+     */
+    private Map<String, List<BoardCategory>> buildCategorySections(List<BoardCategory> categories) {
+        Map<String, List<BoardCategory>> sections = new LinkedHashMap<String, List<BoardCategory>>();
+        sections.put("전사 게시판", new ArrayList<BoardCategory>());
+        sections.put("부서 게시판", new ArrayList<BoardCategory>());
+        sections.put("프로젝트 게시판", new ArrayList<BoardCategory>());
+
+        for (BoardCategory c : categories) {
+            String sec = c.getCategorySection();
+            if (sec != null && !sec.trim().isEmpty()) {
+                List<BoardCategory> list = sections.get(sec.trim());
+                if (list != null) {
+                    list.add(c);
+                } else {
+                    autoClassify(c, sections);
+                }
+            } else {
+                autoClassify(c, sections);
+            }
+        }
+
+        // 빈 섹션 제거
+        List<String> empty = new ArrayList<String>();
+        for (Map.Entry<String, List<BoardCategory>> entry : sections.entrySet()) {
+            if (entry.getValue().isEmpty()) empty.add(entry.getKey());
+        }
+        for (String key : empty) sections.remove(key);
+        return sections;
+    }
+
+    private void autoClassify(BoardCategory c, Map<String, List<BoardCategory>> sections) {
+        if (c.getDeptId() != null || c.isDeptSpecific()) {
+            sections.get("부서 게시판").add(c);
+        } else {
+            sections.get("전사 게시판").add(c);
+        }
     }
 
     private List<BoardCategory> buildSortedCategories(User currentUser) {

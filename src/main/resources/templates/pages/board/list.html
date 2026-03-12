@@ -50,17 +50,20 @@
                 </div>
             </div>
             <nav class="category-menu__list">
-                <a th:each="category : ${categories}"
-                   th:href="@{/board(categoryId=${category.id})}"
-                   th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? 'category-menu__item--active' : ''}"
-                   class="category-menu__item"
-                   th:attr="data-category-id=${category.id}"
-                   onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">
-                    <span th:text="${category.name}">게시판명</span>
-                    <span th:if="${category.deptId != null}" class="cat-badge cat-badge--dept">부서</span>
-                    <span th:if="${category.deptId == null && !category.deptSpecific}" class="cat-badge cat-badge--company">전사</span>
-                    <span class="new-badge">N</span>
-                </a>
+                <th:block th:each="sectionEntry : ${categorySections}">
+                    <div class="category-menu__section-header" th:text="${sectionEntry.key}"></div>
+                    <a th:each="category : ${sectionEntry.value}"
+                       th:href="@{/board(categoryId=${category.id})}"
+                       th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? 'category-menu__item--active' : ''}"
+                       class="category-menu__item"
+                       th:attr="data-category-id=${category.id}"
+                       onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">
+                        <span th:text="${category.name}">게시판명</span>
+                        <span th:if="${category.deptId != null}" class="cat-badge cat-badge--dept">부서</span>
+                        <span th:if="${category.deptId == null && !category.deptSpecific}" class="cat-badge cat-badge--company">전사</span>
+                        <span class="new-badge">N</span>
+                    </a>
+                </th:block>
             </nav>
         </div>
         <div id="categoryMenuOverlay" class="category-menu__overlay" style="display: none;" onclick="toggleCategoryMenu()"></div>
@@ -125,17 +128,20 @@
                         </div>
                     </div>
                     <nav>
-                        <a th:each="category : ${categories}"
-                           th:href="@{/board(categoryId=${category.id})}"
-                           th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? ' board-sidebar__item--active' : ''}"
-                           class="board-sidebar__item"
-                           th:attr="data-category-id=${category.id}"
-                           onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">
-                            <span th:text="${category.name}">게시판명</span>
-                            <span th:if="${category.deptId != null}" class="cat-badge cat-badge--dept">부서</span>
-                            <span th:if="${category.deptId == null && !category.deptSpecific}" class="cat-badge cat-badge--company">전사</span>
-                            <span class="new-badge">N</span>
-                        </a>
+                        <th:block th:each="sectionEntry : ${categorySections}">
+                            <div class="board-sidebar__section-header" th:text="${sectionEntry.key}"></div>
+                            <a th:each="category : ${sectionEntry.value}"
+                               th:href="@{/board(categoryId=${category.id})}"
+                               th:classappend="${selectedCategory != null && selectedCategory.id == category.id ? ' board-sidebar__item--active' : ''}"
+                               class="board-sidebar__item"
+                               th:attr="data-category-id=${category.id}"
+                               onclick="this.href=this.href.split('&t=')[0]+'&t='+Date.now()">
+                                <span th:text="${category.name}">게시판명</span>
+                                <span th:if="${category.deptId != null}" class="cat-badge cat-badge--dept">부서</span>
+                                <span th:if="${category.deptId == null && !category.deptSpecific}" class="cat-badge cat-badge--company">전사</span>
+                                <span class="new-badge">N</span>
+                            </a>
+                        </th:block>
                     </nav>
                     <div class="board-sidebar__guide">
                         <a href="/core/guide/게시판_사용자_매뉴얼.pptx" download class="board-sidebar__guide-link">

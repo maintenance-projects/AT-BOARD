@@ -109,6 +109,15 @@
                             <small class="form-help">비활성화하면 사용자에게 보이지 않습니다.</small>
                         </div>
 
+                        <div class="form-group">
+                            <label for="categorySection" class="form-label">섹션 분류</label>
+                            <select id="categorySection" name="categorySection" class="form-input">
+                                <option value="" th:selected="${category.categorySection == null || #strings.isEmpty(category.categorySection)}">자동 (부서 설정에 따라)</option>
+                                <option value="프로젝트 게시판" th:selected="${category.categorySection == '프로젝트 게시판'}">프로젝트 게시판</option>
+                            </select>
+                            <small class="form-help">자동: 부서 미지정이면 '전사 게시판', 부서 지정이면 '부서 게시판' 으로 표시됩니다. '프로젝트 게시판' 선택 시 해당 섹션에 표시됩니다.</small>
+                        </div>
+
                         <div class="form-actions">
                             <button type="button" onclick="history.back()" class="btn btn--secondary">취소</button>
                             <button type="submit" class="btn btn--primary" th:text="${isEdit ? '수정' : '생성'}">생성</button>

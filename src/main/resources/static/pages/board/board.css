@@ -1085,6 +1085,21 @@
     font-weight: 600;
 }
 
+.category-menu__section-header {
+    padding: 10px 20px 5px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-top: 1px solid var(--line);
+    border-bottom: none;
+}
+
+.category-menu__section-header:first-child {
+    border-top: none;
+}
+
 .category-menu__overlay {
     position: fixed;
     top: 0;
@@ -1560,6 +1575,20 @@
         background: #eff6ff;
         color: #3b82f6;
         font-weight: 600;
+    }
+
+    .board-sidebar__section-header {
+        padding: 10px 16px 5px;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--muted);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-top: 1px solid var(--line);
+    }
+
+    .board-sidebar__section-header:first-child {
+        border-top: none;
     }
 
     /* 게시글 목록 영역 */
@@ -2761,6 +2790,8 @@
     /* PC 사이드바 카테고리 */
     .board-sidebar__item:hover { background: rgba(255, 255, 255, 0.05); }
     .board-sidebar__item--active { background: #1e3a5f; color: #93c5fd; }
+    .board-sidebar__section-header { color: #6b7280; border-top-color: #374151; }
+    .category-menu__section-header { color: #6b7280; border-top-color: #374151; }
 
     /* 검색 히스토리 */
     .search-history__item:hover { background: #374151; }
