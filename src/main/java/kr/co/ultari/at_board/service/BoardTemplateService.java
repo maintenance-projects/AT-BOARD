@@ -169,11 +169,6 @@ public class BoardTemplateService {
     }
 
     private boolean moveSectionInList(List<BoardTemplateSection> all, Long id, int direction) {
-        for (int i = 0; i < all.size(); i++) {
-            all.get(i).setSortOrder(i + 1);
-        }
-        boardTemplateSectionRepository.saveAll(all);
-
         int idx = -1;
         for (int i = 0; i < all.size(); i++) {
             if (all.get(i).getId().equals(id)) { idx = i; break; }
@@ -181,13 +176,14 @@ public class BoardTemplateService {
         int swapIdx = idx + direction;
         if (idx < 0 || swapIdx < 0 || swapIdx >= all.size()) return false;
 
-        BoardTemplateSection a = all.get(idx);
-        BoardTemplateSection b = all.get(swapIdx);
-        int tmp = a.getSortOrder();
-        a.setSortOrder(b.getSortOrder());
-        b.setSortOrder(tmp);
-        boardTemplateSectionRepository.save(a);
-        boardTemplateSectionRepository.save(b);
+        // 메모리에서 normalize + swap 후 saveAll 한 번
+        for (int i = 0; i < all.size(); i++) {
+            all.get(i).setSortOrder(i + 1);
+        }
+        int tmp = all.get(idx).getSortOrder();
+        all.get(idx).setSortOrder(all.get(swapIdx).getSortOrder());
+        all.get(swapIdx).setSortOrder(tmp);
+        boardTemplateSectionRepository.saveAll(all);
         return true;
     }
 
@@ -263,12 +259,24 @@ public class BoardTemplateService {
         Map<String, Object> result = new LinkedHashMap<>();
         BoardTemplate tpl = boardTemplateRepository.findById(id).orElse(null);
         if (tpl == null) { result.put("success", false); result.put("message", "양식을 찾을 수 없습니다."); return result; }
-        if (newSectionId == null || newSectionId < 0) {
-            tpl.setSection(null);
-        } else {
-            BoardTemplateSection section = boardTemplateSectionRepository.findById(newSectionId).orElse(null);
-            tpl.setSection(section);
+
+        BoardTemplateSection newSection = null;
+        if (newSectionId != null && newSectionId > 0) {
+            newSection = boardTemplateSectionRepository.findById(newSectionId).orElse(null);
         }
+        tpl.setSection(newSection);
+
+        // 새 섹션 내 맨 뒤 순서로 배치 (sortOrder 중복 방지)
+        List<BoardTemplate> siblings = newSection != null
+                ? boardTemplateRepository.findBySectionOrderBySortOrderAscNameAsc(newSection)
+                : boardTemplateRepository.findBySectionIsNullOrderBySortOrderAscNameAsc();
+        // siblings에 tpl 자신이 포함될 수 있으므로 제외
+        int count = 0;
+        for (BoardTemplate s : siblings) {
+            if (!s.getId().equals(id)) count++;
+        }
+        tpl.setSortOrder(count + 1);
+
         boardTemplateRepository.save(tpl);
         result.put("success", true);
         return result;
@@ -295,11 +303,6 @@ public class BoardTemplateService {
     }
 
     private boolean moveTemplateInList(List<BoardTemplate> items, Long id, int direction) {
-        for (int i = 0; i < items.size(); i++) {
-            items.get(i).setSortOrder(i + 1);
-        }
-        boardTemplateRepository.saveAll(items);
-
         int idx = -1;
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i).getId().equals(id)) { idx = i; break; }
@@ -307,13 +310,14 @@ public class BoardTemplateService {
         int swapIdx = idx + direction;
         if (idx < 0 || swapIdx < 0 || swapIdx >= items.size()) return false;
 
-        BoardTemplate a = items.get(idx);
-        BoardTemplate b = items.get(swapIdx);
-        int tmp = a.getSortOrder();
-        a.setSortOrder(b.getSortOrder());
-        b.setSortOrder(tmp);
-        boardTemplateRepository.save(a);
-        boardTemplateRepository.save(b);
+        // 메모리에서 normalize + swap 후 saveAll 한 번
+        for (int i = 0; i < items.size(); i++) {
+            items.get(i).setSortOrder(i + 1);
+        }
+        int tmp = items.get(idx).getSortOrder();
+        items.get(idx).setSortOrder(items.get(swapIdx).getSortOrder());
+        items.get(swapIdx).setSortOrder(tmp);
+        boardTemplateRepository.saveAll(items);
         return true;
     }
 
